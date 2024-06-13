@@ -81,7 +81,7 @@ def run_analysis_and_store_signals():
     delta_value_signals = get_spikes(delta_values)
 
     # Calculate final signal
-    final_signal = generate_final_signal(aggressive_ratio_signals, delta_value_signals, cumulative_delta, threshold=4)
+    final_signal = generate_final_signal(aggressive_ratio_signals, delta_value_signals, cumulative_delta, threshold=10)
 
     # Assuming 'volume_profile_signal' and 'price_action_signal' are obtained from other analyses
     volume_profile_signal = "N/A"  # Placeholder
