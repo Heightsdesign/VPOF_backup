@@ -3,9 +3,12 @@ import json
 import sqlite3
 import websockets
 from datetime import datetime, timezone
+import constants
 
 from order_flow_tools import calculate_order_flow_metrics
 from get_signals import get_spikes, generate_final_signal
+from kraken_toolbox import get_open_positions, get_open_orders, place_order, KrakenFuturesAuth
+
 
 # Database connection
 conn = sqlite3.connect('trading_data.db')
@@ -13,6 +16,9 @@ cursor = conn.cursor()
 
 # Store channel ID for trades
 trade_channel_id = None
+order_auth = KrakenFuturesAuth(constants.kraken_public_key, constants.kraken_private_key, '/api/v3/sendorder')
+open_orders_auth = KrakenFuturesAuth(constants.kraken_public_key, constants.kraken_private_key, '/api/v3/openorders')
+open_pos_auth = KrakenFuturesAuth(constants.kraken_public_key, constants.kraken_private_key, '/api/v3/openpositions')
 
 
 # Function to insert trade data
@@ -33,6 +39,69 @@ def insert_signal(timestamp, order_flow_signal, volume_profile_signal, price_act
     VALUES (?, ?, ?, ?)
     """, (timestamp, order_flow_signal, volume_profile_signal, price_action_signal))
     conn.commit()
+
+
+# Function to fetch the last 10 signals from the database
+def fetch_last_10_signals():
+    cursor.execute("""
+    SELECT order_flow_signal FROM signals 
+    ORDER BY timestamp DESC
+    LIMIT 10
+    """)
+    return cursor.fetchall()
+
+
+# Function to check for three consecutive buy or sell signals
+def check_for_consecutive_signals(signals):
+    buy_count = 0
+    sell_count = 0
+
+    for signal in signals:
+        if signal[0] == 'buy':
+            buy_count += 1
+            sell_count = 0
+        elif signal[0] == 'sell':
+            sell_count += 1
+            buy_count = 0
+        else:
+            buy_count = 0
+            sell_count = 0
+
+        if buy_count >= 3:
+            return 'buy'
+        if sell_count >= 3:
+            return 'sell'
+
+    return None
+
+
+def manage_positions(symbol, size):
+    last_10_signals = fetch_last_10_signals()
+    signal = check_for_consecutive_signals(last_10_signals)
+    open_positions = get_open_positions(open_pos_auth)
+    print(open_positions)
+
+    if open_positions and 'openPositions' in open_positions and open_positions['openPositions']:
+        if signal == 'buy':
+            for position in open_positions['openPositions']:
+                if position['symbol'] == symbol and position['side'] == 'short':
+                    # Close any sell positions and open buy position
+                    place_order(order_auth, symbol, 'buy', position['size'] * 2)
+                elif position['symbol'] == symbol and position['side'] == 'long':
+                    break
+
+        elif signal == 'sell':
+            for position in open_positions['openPositions']:
+                if position['symbol'] == symbol and position['side'] == 'long':
+                    # Close any buy positions and open sell position
+                    place_order(order_auth, symbol, 'sell', position['size'] * 2)
+                elif position['symbol'] == symbol and position['side'] == 'short':
+                    break
+    else:
+        if signal == 'buy':
+            place_order(order_auth, symbol, 'buy', size)
+        elif signal == 'sell':
+            place_order(order_auth, symbol, 'sell', size)
 
 
 # WebSocket handler
@@ -90,6 +159,9 @@ def run_analysis_and_store_signals():
     # Insert the signal into the database
     timestamp = int(datetime.now(timezone.utc).timestamp())
     insert_signal(timestamp, final_signal, volume_profile_signal, price_action_signal)
+
+    # Manage positions based on the signals
+    manage_positions('PF_XBTUSD', 0.001)
 
 
 # Periodically run the analysis and store signals

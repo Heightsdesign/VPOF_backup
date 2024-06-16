@@ -1,6 +1,6 @@
 import numpy as np
 import sqlite3
-from datetime import datetime, timezone
+from datetime import datetime, timezone, timedelta
 
 from order_flow_tools import calculate_order_flow_metrics
 
@@ -73,6 +73,8 @@ def generate_final_signal(aggressive_ratio_signals, delta_value_signals, cumulat
     elif cumulative_delta < 0:
         total_score -= 2
 
+    print('SCORE :', total_score)
+
     if total_score >= threshold:
         return 'buy'
     elif total_score <= -threshold:
@@ -93,6 +95,8 @@ def fetch_and_display_signals():
         print(f"ID: {signal_id}, Timestamp: {readable_timestamp}, Order Flow Signal: {order_flow_signal}, "
               f"Volume Profile Signal: {volume_profile_signal}, Price Action Signal: {price_action_signal}")
 
+    return signals
+
 
 # Function to fetch the last 'buy' signal
 def fetch_last_buy_signal():
@@ -111,6 +115,8 @@ def fetch_last_buy_signal():
               f"Price Action Signal: {price_action_signal}")
     else:
         print("No 'buy' signals found.")
+
+    return last_buy_signal
 
 
 # Function to fetch the last 'sell' signal
@@ -131,26 +137,29 @@ def fetch_last_sell_signal():
     else:
         print("No 'sell' signals found.")
 
+    return last_sell_signal
 
-# Function to fetch all signals from today
-def fetch_today_signals():
+
+# Function to fetch all signals from the past 24 hours
+def fetch_last_24_hours_signals():
     current_time = datetime.now(timezone.utc)
-    start_of_day = datetime(current_time.year, current_time.month, current_time.day, tzinfo=timezone.utc)
-    start_timestamp = int(start_of_day.timestamp())
+    start_timestamp = int((current_time - timedelta(hours=24)).timestamp())
 
     cursor.execute("""
     SELECT * FROM signals 
     WHERE timestamp >= ? 
     ORDER BY timestamp DESC
     """, (start_timestamp,))
-    today_signals = cursor.fetchall()
+    last_24_hours_signals = cursor.fetchall()
 
-    print("Today's Signals:")
-    for signal in today_signals:
+    print("Signals from the Past 24 Hours:")
+    for signal in last_24_hours_signals:
         signal_id, timestamp, order_flow_signal, volume_profile_signal, price_action_signal = signal
         readable_timestamp = datetime.fromtimestamp(timestamp, timezone.utc).strftime('%Y-%m-%d %H:%M:%S')
         print(f"ID: {signal_id}, Timestamp: {readable_timestamp}, Order Flow Signal: {order_flow_signal}, "
               f"Volume Profile Signal: {volume_profile_signal}, Price Action Signal: {price_action_signal}")
+
+    return last_24_hours_signals
 
 
 """__________________________________________________________________________________________________________________"""
@@ -177,7 +186,7 @@ fetch_last_buy_signal()
 fetch_last_sell_signal()
 
 # Fetch and display today's signals
-fetch_today_signals()
+fetch_last_24_hours_signals()
 
 # Close the database connection
 conn.close()
