@@ -6,8 +6,8 @@ from datetime import datetime, timezone
 import constants
 
 from order_flow_tools import calculate_order_flow_metrics
-from get_signals import get_spikes, generate_final_signal
-from kraken_toolbox import get_open_positions, get_open_orders, place_order, KrakenFuturesAuth
+from get_signals import get_spikes, generate_final_signal, fetch_last_10_signals
+from kraken_toolbox import get_open_positions, place_order, fetch_live_price, KrakenFuturesAuth
 
 
 # Database connection
@@ -41,16 +41,6 @@ def insert_signal(timestamp, order_flow_signal, volume_profile_signal, price_act
     conn.commit()
 
 
-# Function to fetch the last 10 signals from the database
-def fetch_last_10_signals():
-    cursor.execute("""
-    SELECT order_flow_signal FROM signals 
-    ORDER BY timestamp DESC
-    LIMIT 10
-    """)
-    return cursor.fetchall()
-
-
 # Function to check for three consecutive buy or sell signals
 def check_for_consecutive_signals(signals):
     buy_count = 0
@@ -59,13 +49,10 @@ def check_for_consecutive_signals(signals):
     for signal in signals:
         if signal[0] == 'buy':
             buy_count += 1
-            sell_count = 0
+            sell_count -= 1
         elif signal[0] == 'sell':
             sell_count += 1
-            buy_count = 0
-        else:
-            buy_count = 0
-            sell_count = 0
+            buy_count -= 1
 
         if buy_count >= 3:
             return 'buy'
@@ -73,6 +60,25 @@ def check_for_consecutive_signals(signals):
             return 'sell'
 
     return None
+
+
+def insert_opened_position(open_price, side, size):
+    timestamp = int(datetime.now(timezone.utc).timestamp())
+    cursor.execute("""
+    INSERT INTO opened_positions (timestamp, open_price, side, size)
+    VALUES (?, ?, ?, ?)
+    """, (timestamp, open_price, side, size))
+    conn.commit()
+
+
+def close_position(position_id, close_price):
+    close_time = int(datetime.now(timezone.utc).timestamp())
+    cursor.execute("""
+    UPDATE opened_positions
+    SET close_price = ?, close_time = ?
+    WHERE id = ?
+    """, (close_price, close_time, position_id))
+    conn.commit()
 
 
 def manage_positions(symbol, size):
@@ -87,6 +93,8 @@ def manage_positions(symbol, size):
                 if position['symbol'] == symbol and position['side'] == 'short':
                     # Close any sell positions and open buy position
                     place_order(order_auth, symbol, 'buy', position['size'] * 2)
+                    close_position(position['id'], position['current_price'])
+                    insert_opened_position(position['current_price'], 'long', position['size'] * 2)
                 elif position['symbol'] == symbol and position['side'] == 'long':
                     break
 
@@ -95,13 +103,61 @@ def manage_positions(symbol, size):
                 if position['symbol'] == symbol and position['side'] == 'long':
                     # Close any buy positions and open sell position
                     place_order(order_auth, symbol, 'sell', position['size'] * 2)
+                    close_position(position['id'], position['current_price'])
+                    insert_opened_position(position['current_price'], 'short', position['size'] * 2)
                 elif position['symbol'] == symbol and position['side'] == 'short':
                     break
     else:
+        current_price = fetch_live_price(symbol)['last_price']
         if signal == 'buy':
             place_order(order_auth, symbol, 'buy', size)
+            insert_opened_position(current_price, 'long', size)
         elif signal == 'sell':
             place_order(order_auth, symbol, 'sell', size)
+            insert_opened_position(current_price, 'short', size)
+
+
+def check_trailing_stop(symbol):
+    cursor.execute("""
+    SELECT id, open_price, side, size
+    FROM opened_positions
+    WHERE close_price IS NULL
+    """)
+    open_positions = cursor.fetchall()
+
+    for position in open_positions:
+        position_id, open_price, side, size = position
+        current_price = fetch_live_price(symbol)['last_price']
+        if side == 'long':
+            highest_price = max(get_highest_price_since_open(position_id), current_price)
+            if (highest_price - open_price) > 0:
+                if (highest_price - current_price) / (highest_price - open_price) > 0.5:
+                    place_order(order_auth, symbol, 'sell', size)
+                    close_position(position_id, current_price)
+        elif side == 'short':
+            lowest_price = min(get_lowest_price_since_open(position_id), current_price)
+            if (open_price - lowest_price) > 0:
+                if (current_price - lowest_price) / (open_price - lowest_price) > 0.5:
+                    place_order(order_auth, symbol, 'buy', size)
+                    close_position(position_id, current_price)
+
+
+def get_highest_price_since_open(position_id):
+    cursor.execute("""
+    SELECT MAX(price)
+    FROM trades
+    WHERE timestamp >= (SELECT timestamp FROM opened_positions WHERE id = ?)
+    """, (position_id,))
+    return cursor.fetchone()[0]
+
+
+def get_lowest_price_since_open(position_id):
+    cursor.execute("""
+    SELECT MIN(price)
+    FROM trades
+    WHERE timestamp >= (SELECT timestamp FROM opened_positions WHERE id = ?)
+    """, (position_id,))
+    return cursor.fetchone()[0]
 
 
 # WebSocket handler
@@ -168,6 +224,7 @@ def run_analysis_and_store_signals():
 async def periodic_analysis(interval):
     while True:
         run_analysis_and_store_signals()
+        check_trailing_stop('PF_XBTUSD')
         await asyncio.sleep(interval)
 
 

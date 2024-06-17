@@ -34,6 +34,18 @@ CREATE TABLE IF NOT EXISTS signals (
 )
 """)
 
+cursor.execute("""
+CREATE TABLE IF NOT EXISTS opened_positions (
+    id INTEGER PRIMARY KEY AUTOINCREMENT,
+    timestamp INTEGER,
+    open_price REAL,
+    side TEXT,
+    size REAL,
+    close_price REAL,
+    close_time INTEGER
+)
+""")
+
 
 # Execute SQL commands to create tables
 cursor.execute(create_trades_table)

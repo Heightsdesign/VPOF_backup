@@ -162,6 +162,15 @@ def fetch_last_24_hours_signals():
     return last_24_hours_signals
 
 
+def fetch_last_10_signals():
+    cursor.execute("""
+    SELECT order_flow_signal FROM signals 
+    ORDER BY timestamp DESC
+    LIMIT 10
+    """)
+    return cursor.fetchall()
+
+
 """__________________________________________________________________________________________________________________"""
 
 # Example usage with your data
@@ -186,7 +195,10 @@ fetch_last_buy_signal()
 fetch_last_sell_signal()
 
 # Fetch and display today's signals
-fetch_last_24_hours_signals()
+# fetch_last_24_hours_signals()
+
+# Fetch last ten signals
+print(fetch_last_10_signals())
 
 # Close the database connection
 conn.close()
