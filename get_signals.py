@@ -29,12 +29,10 @@ def get_spikes(data):
     for i, value in enumerate(data):
         abs_value = abs(value)
         if abs_value > median_val * base_threshold * 6:
-            rating = 'fire at will'
-        elif abs_value > median_val * base_threshold * 4:
             rating = 'very_strong'
-        elif abs_value > median_val * base_threshold * 2:
+        elif abs_value > median_val * base_threshold * 4:
             rating = 'strong'
-        elif abs_value > median_val * base_threshold:
+        elif abs_value > median_val * base_threshold * 2:
             rating = 'mild'
         else:
             rating = None
@@ -46,13 +44,15 @@ def get_spikes(data):
 
 
 # Function to score signals and generate a final decision
-def generate_final_signal(aggressive_ratio_signals, delta_value_signals, cumulative_delta, threshold=4):
+def generate_final_signal(aggressive_ratio_signals, delta_value_signals, cumulative_delta, threshold):
     rating_score = {
         'mild': 1,
         'strong': 2,
         'very_strong': 3,
-        'fire at will': 4
     }
+
+    pos_ratios = 0
+    neg_ratios = 0
 
     def score_signals(signals):
         score = 0
@@ -63,6 +63,12 @@ def generate_final_signal(aggressive_ratio_signals, delta_value_signals, cumulat
             score += signal_score
         return score
 
+    for ratio in aggressive_ratio_signals:
+        if ratio > 0:
+            pos_ratios += 1
+        elif ratio < 0:
+            neg_ratios += 1
+
     aggressive_ratio_score = score_signals(aggressive_ratio_signals)
     delta_value_score = score_signals(delta_value_signals)
 
@@ -71,6 +77,11 @@ def generate_final_signal(aggressive_ratio_signals, delta_value_signals, cumulat
     if cumulative_delta > 0:
         total_score += 2
     elif cumulative_delta < 0:
+        total_score -= 2
+
+    if pos_ratios > neg_ratios:
+        total_score += 2
+    elif pos_ratios < neg_ratios:
         total_score -= 2
 
     print('SCORE :', total_score)
@@ -195,10 +206,10 @@ fetch_last_buy_signal()
 fetch_last_sell_signal()
 
 # Fetch and display today's signals
-# fetch_last_24_hours_signals()
+fetch_last_24_hours_signals()
 
 # Fetch last ten signals
-print(fetch_last_10_signals())
+# print(fetch_last_10_signals())
 
 # Close the database connection
-conn.close()
+# conn.close()
