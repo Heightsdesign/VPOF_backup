@@ -77,24 +77,18 @@ def close_position(position_id, close_price):
     """, (close_price, close_time, position_id))
     conn.commit()
 
-
-# Function to check for three consecutive buy or sell signals
+# Function to check if the two most recent signals are 'buy' or 'sell'
 def check_for_consecutive_signals(signals):
-    buy_count = 0
-    sell_count = 0
+    if len(signals) < 2:
+        return None
 
-    for signal in signals:
-        if signal[0] == 'buy':
-            buy_count += 1
-            sell_count -= 1
-        elif signal[0] == 'sell':
-            sell_count += 1
-            buy_count -= 1
+    last_signal = signals[-1][0]
+    second_last_signal = signals[-2][0]
 
-        if buy_count >= 2:
-            return 'buy'
-        if sell_count >= 2:
-            return 'sell'
+    if last_signal == 'buy' and second_last_signal == 'buy':
+        return 'buy'
+    elif last_signal == 'sell' and second_last_signal == 'sell':
+        return 'sell'
 
     return None
 

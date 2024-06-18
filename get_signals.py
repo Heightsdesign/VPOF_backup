@@ -17,7 +17,6 @@ cursor = conn.cursor()
 
 def get_spikes(data):
     signals = []
-    base_threshold = 4
 
     # Turn all values positive for median calculation
     abs_data = [abs(value) for value in data]
@@ -28,11 +27,11 @@ def get_spikes(data):
     # Iterate over the data and determine signals based on thresholds
     for i, value in enumerate(data):
         abs_value = abs(value)
-        if abs_value > median_val * base_threshold * 6:
+        if abs_value > median_val * 6:
             rating = 'very_strong'
-        elif abs_value > median_val * base_threshold * 4:
+        elif abs_value > median_val * 4:
             rating = 'strong'
-        elif abs_value > median_val * base_threshold * 2:
+        elif abs_value > median_val * 2:
             rating = 'mild'
         else:
             rating = None
