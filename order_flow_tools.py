@@ -6,7 +6,7 @@ from sklearn.linear_model import LinearRegression
 
 # Variables
 time_frame_minutes = 5  # Adjust this variable as needed
-look_back_period = 12  # Number of candles to look back
+look_back_period = 9  # Number of candles to look back
 
 # Connect to the SQLite database
 conn = sqlite3.connect('trading_data.db')
