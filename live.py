@@ -141,6 +141,7 @@ def manage_positions(symbol, size):
             place_order(order_auth, symbol, 'sell', size)
             insert_position(current_price, 'short', size, current_price, atr)
 
+
 def check_trailing_stop(symbol):
     cursor.execute("""
     SELECT id, open_price, side, size, timestamp
@@ -160,23 +161,15 @@ def check_trailing_stop(symbol):
 
         if side == 'long':
             highest_price = max(historical_data['high'].max(), current_price)
-            if (highest_price - open_price) > 0:
-                if (highest_price - current_price) / atr > 0.5:
-                    place_order(order_auth, symbol, 'sell', size)
-                    close_position(position_id, current_price)
-                elif (open_price - current_price) / atr > 3:
-                    place_order(order_auth, symbol, 'sell', size)
-                    close_position(position_id, current_price)
+            if (highest_price - current_price) / atr > 3:
+                place_order(order_auth, symbol, 'sell', size)
+                close_position(position_id, current_price)
+
         elif side == 'short':
             lowest_price = min(historical_data['low'].min(), current_price)
-            if (open_price - lowest_price) > 0:
-                if (current_price - lowest_price) / atr > 0.5:
-                    place_order(order_auth, symbol, 'buy', size)
-                    close_position(position_id, current_price)
-                elif (current_price - open_price) / atr > 3:
-                    place_order(order_auth, symbol, 'buy', size)
-                    close_position(position_id, current_price)
-
+            if (current_price - lowest_price) / atr > 3:
+                place_order(order_auth, symbol, 'buy', size)
+                close_position(position_id, current_price)
 
 
 def get_highest_price_since_open(position_id):
