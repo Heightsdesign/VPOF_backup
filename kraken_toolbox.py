@@ -49,7 +49,7 @@ class KrakenFuturesAuth:
         return request
 
 
-def fetch_candles_since(pair, interval=1, start_time=None):
+def fetch_candles_since(pair, interval=5, start_time=None):
     """
     Fetch OHLC candles from Kraken starting from a specific timestamp.
 
