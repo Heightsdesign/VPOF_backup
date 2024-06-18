@@ -34,6 +34,7 @@ CREATE TABLE IF NOT EXISTS signals (
 )
 """)
 
+
 cursor.execute("""
 CREATE TABLE IF NOT EXISTS opened_positions (
     id INTEGER PRIMARY KEY AUTOINCREMENT,
@@ -41,9 +42,12 @@ CREATE TABLE IF NOT EXISTS opened_positions (
     open_price REAL,
     side TEXT,
     size REAL,
+    highest_price REAL,
+    atr REAL,
     close_price REAL,
     close_time INTEGER
 )
+
 """)
 
 

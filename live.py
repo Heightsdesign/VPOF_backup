@@ -3,11 +3,13 @@ import json
 import sqlite3
 import websockets
 from datetime import datetime, timezone
+import pandas as pd
 import constants
 
 from order_flow_tools import calculate_order_flow_metrics
 from get_signals import get_spikes, generate_final_signal, fetch_last_10_signals
-from kraken_toolbox import get_open_positions, place_order, fetch_live_price, KrakenFuturesAuth
+from kraken_toolbox import (get_open_positions, place_order,
+                            fetch_live_price, fetch_candles_since, fetch_last_n_candles, KrakenFuturesAuth)
 
 
 # Database connection
@@ -41,33 +43,28 @@ def insert_signal(timestamp, order_flow_signal, volume_profile_signal, price_act
     conn.commit()
 
 
-# Function to check for three consecutive buy or sell signals
-def check_for_consecutive_signals(signals):
-    buy_count = 0
-    sell_count = 0
-
-    for signal in signals:
-        if signal[0] == 'buy':
-            buy_count += 1
-            sell_count -= 1
-        elif signal[0] == 'sell':
-            sell_count += 1
-            buy_count -= 1
-
-        if buy_count >= 3:
-            return 'buy'
-        if sell_count >= 3:
-            return 'sell'
-
-    return None
-
-
-def insert_opened_position(open_price, side, size):
+def insert_position(open_price, side, size, highest_price, atr):
     timestamp = int(datetime.now(timezone.utc).timestamp())
     cursor.execute("""
-    INSERT INTO opened_positions (timestamp, open_price, side, size)
-    VALUES (?, ?, ?, ?)
-    """, (timestamp, open_price, side, size))
+    INSERT INTO opened_positions (timestamp, open_price, side, size, highest_price, atr)
+    VALUES (?, ?, ?, ?, ?, ?)
+    """, (timestamp, open_price, side, size, highest_price, atr))
+    conn.commit()
+
+
+def update_position(position_id, side, price, size, atr):
+    if side == 'buy':
+        cursor.execute("""
+        UPDATE opened_positions
+        SET highest_price = ?, atr = ?
+        WHERE id = ? AND highest_price < ?
+        """, (price, atr, position_id, price))
+    elif side == 'sell':
+        cursor.execute("""
+        UPDATE opened_positions
+        SET highest_price = ?, atr = ?
+        WHERE id = ? AND highest_price > ?
+        """, (price, atr, position_id, price))
     conn.commit()
 
 
@@ -81,63 +78,97 @@ def close_position(position_id, close_price):
     conn.commit()
 
 
+# Function to check for three consecutive buy or sell signals
+def check_for_consecutive_signals(signals):
+    buy_count = 0
+    sell_count = 0
+
+    for signal in signals:
+        if signal[0] == 'buy':
+            buy_count += 1
+            sell_count -= 1
+        elif signal[0] == 'sell':
+            sell_count += 1
+            buy_count -= 1
+
+        if buy_count >= 2:
+            return 'buy'
+        if sell_count >= 2:
+            return 'sell'
+
+    return None
+
+
+def calculate_atr(df, period=14):
+    df['previous_close'] = df['close'].shift(1)
+    df['H-L'] = df['high'] - df['low']
+    df['H-PC'] = (df['high'] - df['previous_close']).abs()
+    df['L-PC'] = (df['low'] - df['previous_close']).abs()
+    df['TR'] = df[['H-L', 'H-PC', 'L-PC']].max(axis=1)
+    atr = df['TR'].rolling(window=period).mean().iloc[-1]
+    return atr
+
+
 def manage_positions(symbol, size):
     last_10_signals = fetch_last_10_signals()
     signal = check_for_consecutive_signals(last_10_signals)
     open_positions = get_open_positions(open_pos_auth)
-    print(open_positions)
+    current_price = fetch_live_price(symbol)['last_price']
+    data = fetch_candles_since('XXBTZUSD')  # Function to fetch historical data for ATR calculation
+    atr = calculate_atr(data)
 
     if open_positions and 'openPositions' in open_positions and open_positions['openPositions']:
         if signal == 'buy':
             for position in open_positions['openPositions']:
                 if position['symbol'] == symbol and position['side'] == 'short':
-                    # Close any sell positions and open buy position
                     place_order(order_auth, symbol, 'buy', position['size'] * 2)
-                    close_position(position['id'], position['current_price'])
-                    insert_opened_position(position['current_price'], 'long', position['size'] * 2)
+                    update_position(position['id'], 'buy', current_price, position['size'] * 2, atr)
                 elif position['symbol'] == symbol and position['side'] == 'long':
                     break
 
         elif signal == 'sell':
             for position in open_positions['openPositions']:
                 if position['symbol'] == symbol and position['side'] == 'long':
-                    # Close any buy positions and open sell position
                     place_order(order_auth, symbol, 'sell', position['size'] * 2)
-                    close_position(position['id'], position['current_price'])
-                    insert_opened_position(position['current_price'], 'short', position['size'] * 2)
+                    update_position(position['id'], 'sell', current_price, position['size'] * 2, atr)
                 elif position['symbol'] == symbol and position['side'] == 'short':
                     break
     else:
-        current_price = fetch_live_price(symbol)['last_price']
         if signal == 'buy':
             place_order(order_auth, symbol, 'buy', size)
-            insert_opened_position(current_price, 'long', size)
+            insert_position(current_price, 'long', size, current_price, atr)
         elif signal == 'sell':
             place_order(order_auth, symbol, 'sell', size)
-            insert_opened_position(current_price, 'short', size)
+            insert_position(current_price, 'short', size, current_price, atr)
 
 
 def check_trailing_stop(symbol):
     cursor.execute("""
-    SELECT id, open_price, side, size
+    SELECT id, open_price, side, size, timestamp
     FROM opened_positions
     WHERE close_price IS NULL
     """)
     open_positions = cursor.fetchall()
 
     for position in open_positions:
-        position_id, open_price, side, size = position
+        position_id, open_price, side, size, open_timestamp = position
         current_price = fetch_live_price(symbol)['last_price']
+
+        # Fetch historical data since the position was opened
+        historical_data = fetch_candles_since('XXBTZUSD', interval=5, start_time=open_timestamp)
+        atr_data = fetch_last_n_candles('XXBTZUSD')
+        atr = calculate_atr(atr_data, period=14)
+
         if side == 'long':
-            highest_price = max(get_highest_price_since_open(position_id), current_price)
+            highest_price = max(historical_data['high'].max(), current_price)
             if (highest_price - open_price) > 0:
-                if (highest_price - current_price) / (highest_price - open_price) > 0.5:
+                if (highest_price - current_price) / atr > 0.5:
                     place_order(order_auth, symbol, 'sell', size)
                     close_position(position_id, current_price)
         elif side == 'short':
-            lowest_price = min(get_lowest_price_since_open(position_id), current_price)
+            lowest_price = min(historical_data['low'].min(), current_price)
             if (open_price - lowest_price) > 0:
-                if (current_price - lowest_price) / (open_price - lowest_price) > 0.5:
+                if (current_price - lowest_price) / atr > 0.5:
                     place_order(order_auth, symbol, 'buy', size)
                     close_position(position_id, current_price)
 

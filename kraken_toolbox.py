@@ -5,6 +5,7 @@ import constants
 import datetime
 import time
 import json
+import pandas as pd
 
 
 # Define the base API URL for Kraken Futures
@@ -46,6 +47,75 @@ class KrakenFuturesAuth:
         })
         # print("Request headers:", request.headers)  # Debugging
         return request
+
+
+def fetch_candles_since(pair, interval=1, start_time=None):
+    """
+    Fetch OHLC candles from Kraken starting from a specific timestamp.
+
+    :param pair: The trading pair (e.g., 'XXBTZUSD' for BTC/USD).
+    :param interval: The interval in minutes (1, 5, 15, 30, 60, 240, 1440, 10080, 21600).
+    :param start_time: The starting timestamp in seconds.
+    :return: DataFrame containing the OHLC data.
+    """
+    url = 'https://api.kraken.com/0/public/OHLC'
+    params = {
+        'pair': pair,
+        'interval': interval,
+        'since': start_time
+    }
+
+    response = requests.get(url, params=params)
+    data = response.json()
+
+    if data['error']:
+        raise Exception(f"Error fetching data from Kraken API: {data['error']}")
+
+    ohlc_data = data['result'][pair]
+    df = pd.DataFrame(ohlc_data, columns=['time', 'open', 'high', 'low', 'close', 'vwap', 'volume', 'count'])
+
+    # Convert timestamp to datetime
+    df['time'] = pd.to_datetime(df['time'], unit='s')
+
+    # Ensure numeric types for calculations
+    df[['open', 'high', 'low', 'close', 'vwap', 'volume']] = df[
+        ['open', 'high', 'low', 'close', 'vwap', 'volume']].apply(pd.to_numeric)
+
+    return df
+
+
+def fetch_last_n_candles(pair, interval=5, num_candles=15):
+    """
+    Fetch the last N OHLC candles from Kraken.
+
+    :param pair: The trading pair (e.g., 'XXBTZUSD' for BTC/USD).
+    :param interval: The interval in minutes (1, 5, 15, 30, 60, 240, 1440, 10080, 21600).
+    :param num_candles: The number of candles to fetch.
+    :return: DataFrame containing the OHLC data.
+    """
+    url = 'https://api.kraken.com/0/public/OHLC'
+    params = {
+        'pair': pair,
+        'interval': interval
+    }
+
+    response = requests.get(url, params=params)
+    data = response.json()
+
+    if data['error']:
+        raise Exception(f"Error fetching data from Kraken API: {data['error']}")
+
+    ohlc_data = data['result'][pair][-num_candles:]
+    df = pd.DataFrame(ohlc_data, columns=['time', 'open', 'high', 'low', 'close', 'vwap', 'volume', 'count'])
+
+    # Convert timestamp to datetime
+    df['time'] = pd.to_datetime(df['time'], unit='s')
+
+    # Ensure numeric types for calculations
+    df[['open', 'high', 'low', 'close', 'vwap', 'volume']] = df[
+        ['open', 'high', 'low', 'close', 'vwap', 'volume']].apply(pd.to_numeric)
+
+    return df
 
 
 def place_order(auth, symbol, side, size, orderType='mkt', limitPrice=None, stopPrice=None, clientOrderId=None):
@@ -210,10 +280,7 @@ def edit_order(auth, size, orderId= None, limitPrice=None, stopPrice=None, clien
     if limitPrice is not None:
         order['limitPrice'] = limitPrice
 
-
-
     print(order)
-
     postBody = urllib.parse.urlencode(order)
     response = requests.post(full_url, data=postBody, auth=auth,
                              headers={'Content-Type': 'application/x-www-form-urlencoded'})
@@ -287,4 +354,7 @@ if price_info:
     print(f"Last Price for {symbol}: {price_info['last_price']}")
     print(f"Bid: {price_info['bid']}, Ask: {price_info['ask']}")
 else:
-    print("Price information could not be retrieved.")"""
+    print("Price information could not be retrieved.")
+
+historical_data = fetch_candles_since('XXBTZUSD')
+print(historical_data)"""

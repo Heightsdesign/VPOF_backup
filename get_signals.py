@@ -63,7 +63,7 @@ def generate_final_signal(aggressive_ratio_signals, delta_value_signals, cumulat
             score += signal_score
         return score
 
-    for ratio in aggressive_ratio_signals:
+    for ratio in aggressive_ratios:
         if ratio > 0:
             pos_ratios += 1
         elif ratio < 0:
