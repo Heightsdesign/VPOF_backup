@@ -77,13 +77,14 @@ def close_position(position_id, close_price):
     """, (close_price, close_time, position_id))
     conn.commit()
 
+
 # Function to check if the two most recent signals are 'buy' or 'sell'
 def check_for_consecutive_signals(signals):
     if len(signals) < 2:
         return None
 
-    last_signal = signals[-1][0]
-    second_last_signal = signals[-2][0]
+    last_signal = signals[0][0]
+    second_last_signal = signals[1][0]
 
     if last_signal == 'buy' and second_last_signal == 'buy':
         return 'buy'
@@ -127,7 +128,8 @@ def manage_positions(symbol, size):
                     update_position(position['id'], 'sell', current_price, position['size'] * 2, atr)
                 elif position['symbol'] == symbol and position['side'] == 'short':
                     break
-    else:
+
+    elif not open_positions['openPositions']:
         if signal == 'buy':
             place_order(order_auth, symbol, 'buy', size)
             insert_position(current_price, 'long', size, current_price, atr)
