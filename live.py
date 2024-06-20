@@ -4,11 +4,13 @@ import sqlite3
 import websockets
 from datetime import datetime, timezone
 import pandas_ta as ta
+import pandas as pd
+import numpy as np
 import constants
 
 from order_flow_tools import calculate_order_flow_metrics
 from get_signals import get_spikes, generate_final_signal, fetch_last_10_signals
-from kraken_toolbox import (get_open_positions, place_order,
+from kraken_toolbox import (get_open_positions, place_order, fetch_candles_since,
                             fetch_live_price, fetch_last_n_candles, KrakenFuturesAuth)
 
 
@@ -45,12 +47,12 @@ def insert_signal(
     conn.commit()
 
 
-def insert_position(open_price, side, size, highest_price):
+def insert_position(kraken_id, open_price, side, size, highest_price):
     timestamp = int(datetime.now(timezone.utc).timestamp())
     cursor.execute("""
-    INSERT INTO opened_positions (timestamp, open_price, side, size, highest_price)
-    VALUES (?, ?, ?, ?, ?, ?)
-    """, (timestamp, open_price, side, size, highest_price))
+    INSERT INTO opened_positions (kraken_id, timestamp, open_price, side, size, highest_price)
+    VALUES (?, ?, ?, ?, ?, ?, ?)
+    """, (kraken_id, timestamp, open_price, side, size, highest_price))
     conn.commit()
 
 
@@ -59,7 +61,7 @@ def close_position(position_id, close_price):
     cursor.execute("""
     UPDATE opened_positions
     SET close_price = ?, close_time = ?
-    WHERE id = ?
+    WHERE kraken_id = ?
     """, (close_price, close_time, position_id))
     conn.commit()
 
@@ -114,6 +116,35 @@ def check_stochastic_setup(df):
         return None
 
 
+def calculate_williams_fractals(df, period=2):
+    # Ensure that the high and low columns are numeric and replace non-numeric with NaN
+    df['high'] = pd.to_numeric(df['high'], errors='coerce')
+    df['low'] = pd.to_numeric(df['low'], errors='coerce')
+
+    # Ensure all values are numeric (convert NaN to a very small number)
+    df['high'].fillna(value=np.nan, inplace=True)
+    df['low'].fillna(value=np.nan, inplace=True)
+
+    # Calculate the Williams Fractals
+    def fractal_up(series):
+        center = len(series) // 2
+        if series[center] == max(series):
+            return series[center]
+        return np.nan
+
+    def fractal_down(series):
+        center = len(series) // 2
+        if series[center] == min(series):
+            return series[center]
+        return np.nan
+
+    df['fractal_up'] = df['high'].rolling(window=2 * period + 1, center=True).apply(fractal_up, raw=True)
+    df['fractal_down'] = df['low'].rolling(window=2 * period + 1, center=True).apply(fractal_down, raw=True)
+
+    return df
+
+
+
 def manage_positions(symbol, size):
     global stored_signal
 
@@ -121,9 +152,9 @@ def manage_positions(symbol, size):
     check_for_consecutive_signals(last_10_signals)
     open_positions = get_open_positions(open_pos_auth)
     current_price = fetch_live_price(symbol)['last_price']
-    data = fetch_last_n_candles('XXBTZUSD')  # Function to fetch historical data for ATR calculation
-    stoch_data = calculate_stochastic_rsi(data)
-    stoch_check = check_stochastic_setup(stoch_data)
+    data = fetch_last_n_candles('XXBTZUSD')
+    print(data)
+    fractals_data = calculate_williams_fractals(data)
 
     # Check if there are opened positions
     if open_positions and 'openPositions' in open_positions and open_positions['openPositions']:
@@ -132,21 +163,37 @@ def manage_positions(symbol, size):
             # Check if the position opened for the symbol is a short
             if position['symbol'] == symbol and position['side'] == 'short':
                 # If buy signal close short position
-                if stored_signal == 'buy' or stoch_check == 'buy':
+                if stored_signal == 'buy' and not pd.isna(fractals_data['fractal_down'].iloc[-1]):
                     place_order(order_auth, symbol, 'buy', position['size'])
+                    close_position(position['id'], current_price)
 
             # Check if the position opened for the symbol is a long
             elif position['symbol'] == symbol and position['side'] == 'long':
                 # If sell signal close short position
-                if stored_signal == 'sell' or stoch_check == 'sell':
+                if stored_signal == 'sell' and not pd.isna(fractals_data['fractal_up'].iloc[-1]):
                     place_order(order_auth, symbol, 'sell', position['size'])
+                    close_position(position['id'], current_price)
 
     if not open_positions['openPositions']:
-        if stored_signal == 'buy' and stoch_check == 'buy':
+        if stored_signal == 'buy' and not pd.isna(fractals_data['fractal_down'].iloc[-1]):
             place_order(order_auth, symbol, 'buy', size)
 
-        elif stored_signal == 'sell' and stoch_check == 'sell':
+            open_positions = get_open_positions(open_pos_auth)
+            for position in open_positions['openPositions']:
+                if position['symbol'] == symbol and position['side'] == 'long':
+                    kraken_id = position['id']
+
+            insert_position(kraken_id, current_price, 'long', size, current_price)
+
+        elif stored_signal == 'sell' and not pd.isna(fractals_data['fractal_up'].iloc[-1]):
             place_order(order_auth, symbol, 'sell', size)
+
+            open_positions = get_open_positions(open_pos_auth)
+            for position in open_positions['openPositions']:
+                if position['symbol'] == symbol and position['side'] == 'short':
+                    kraken_id = position['id']
+
+            insert_position(kraken_id, current_price, 'short', size, current_price)
 
 
 # WebSocket handler
@@ -181,6 +228,40 @@ async def kraken_websocket():
                     trades = data[1]
                     insert_trade(trades)
                     print(f"Inserted trade data")
+
+
+# Function to check for trailing stop using fractals
+def check_trailing_stop(symbol):
+    cursor.execute("""
+    SELECT id, open_price, side, size, timestamp
+    FROM opened_positions
+    WHERE close_price IS NULL
+    """)
+    open_positions = cursor.fetchall()
+
+    for position in open_positions:
+        position_id, open_price, side, size, open_timestamp = position
+        current_price = fetch_live_price(symbol)['last_price']
+
+        # Fetch historical data since the position was opened
+        historical_data = fetch_candles_since('XXBTZUSD', interval=5, start_time=open_timestamp)
+        fractals_data = calculate_williams_fractals(historical_data)
+
+        if side == 'long':
+            recent_down_fractals = fractals_data['fractal_down'].dropna()
+            if not recent_down_fractals.empty:
+                trailing_stop_price = recent_down_fractals.iloc[-1]
+                if current_price < trailing_stop_price:
+                    place_order(order_auth, symbol, 'sell', size)
+                    close_position(position_id, current_price)
+
+        elif side == 'short':
+            recent_up_fractals = fractals_data['fractal_up'].dropna()
+            if not recent_up_fractals.empty:
+                trailing_stop_price = recent_up_fractals.iloc[-1]
+                if current_price > trailing_stop_price:
+                    place_order(order_auth, symbol, 'buy', size)
+                    close_position(position_id, current_price)
 
 
 # Function to run the order flow analysis and store signals
