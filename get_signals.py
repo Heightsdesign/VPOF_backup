@@ -164,10 +164,10 @@ def fetch_last_24_hours_signals():
 
     print("Signals from the Past 24 Hours:")
     for signal in last_24_hours_signals:
-        signal_id, timestamp, order_flow_signal, volume_profile_signal, price_action_signal = signal
+        signal_id, timestamp, order_flow_signal, orderflow_score, volume_profile_signal, price_action_signal = signal
         readable_timestamp = datetime.fromtimestamp(timestamp, timezone.utc).strftime('%Y-%m-%d %H:%M:%S')
         print(f"ID: {signal_id}, Timestamp: {readable_timestamp}, Order Flow Signal: {order_flow_signal}, "
-              f"Volume Profile Signal: {volume_profile_signal}, Price Action Signal: {price_action_signal}")
+              f"Order Flow Score: {orderflow_score}")
 
     return last_24_hours_signals
 
