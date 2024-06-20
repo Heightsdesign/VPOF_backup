@@ -125,24 +125,23 @@ def manage_positions(symbol, size):
     stoch_data = calculate_stochastic_rsi(data)
     stoch_check = check_stochastic_setup(stoch_data)
 
+    # Check if there are opened positions
     if open_positions and 'openPositions' in open_positions and open_positions['openPositions']:
         for position in open_positions['openPositions']:
+
+            # Check if the position opened for the symbol is a short
             if position['symbol'] == symbol and position['side'] == 'short':
-                if stored_signal == 'buy' and stoch_check == 'buy':
-                    place_order(order_auth, symbol, 'buy', position['size'] * 2)
+                # If buy signal close short position
+                if stored_signal == 'buy':
+                    place_order(order_auth, symbol, 'buy', position['size'])
 
+            # Check if the position opened for the symbol is a long
             elif position['symbol'] == symbol and position['side'] == 'long':
-                break
+                # If sell signal close short position
+                if stored_signal == 'sell':
+                    place_order(order_auth, symbol, 'sell', position['size'])
 
-        for position in open_positions['openPositions']:
-            if position['symbol'] == symbol and position['side'] == 'long':
-                if stored_signal == 'sell' and stoch_check == 'sell':
-                    place_order(order_auth, symbol, 'sell', position['size'] * 2)
-
-            elif position['symbol'] == symbol and position['side'] == 'short':
-                break
-
-    elif not open_positions['openPositions']:
+    if not open_positions['openPositions']:
         if stored_signal == 'buy' and stoch_check == 'buy':
             place_order(order_auth, symbol, 'buy', size)
 
