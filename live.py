@@ -3,14 +3,13 @@ import json
 import sqlite3
 import websockets
 from datetime import datetime, timezone
-import pandas as pd
 import pandas_ta as ta
 import constants
 
 from order_flow_tools import calculate_order_flow_metrics
 from get_signals import get_spikes, generate_final_signal, fetch_last_10_signals
 from kraken_toolbox import (get_open_positions, place_order,
-                            fetch_live_price, fetch_candles_since, fetch_last_n_candles, KrakenFuturesAuth)
+                            fetch_live_price, fetch_last_n_candles, KrakenFuturesAuth)
 
 
 # Database connection
@@ -37,11 +36,12 @@ def insert_trade(trades):
     conn.commit()
 
 
-def insert_signal(timestamp, order_flow_signal, volume_profile_signal, price_action_signal):
+def insert_signal(
+        timestamp, order_flow_signal, order_flow_score, volume_profile_signal, price_action_signal):
     cursor.execute("""
-    INSERT INTO signals (timestamp, order_flow_signal, volume_profile_signal, price_action_signal)
+    INSERT INTO signals (timestamp, order_flow_signal, order_flow_score, volume_profile_signal, price_action_signal)
     VALUES (?, ?, ?, ?)
-    """, (timestamp, order_flow_signal, volume_profile_signal, price_action_signal))
+    """, (timestamp, order_flow_signal, order_flow_score, volume_profile_signal, price_action_signal))
     conn.commit()
 
 
@@ -73,9 +73,9 @@ def check_for_consecutive_signals(signals):
 
     first_signal = signals[0][0]
     second_signal = signals[1][0]
-    third_signal = signals[1][0]
+    third_signal = signals[2][0]
 
-    if first_signal == 'buy' and second_signal == 'buy' and third_signal == 'buy' :
+    if first_signal == 'buy' and second_signal == 'buy' and third_signal == 'buy':
         stored_signal = 'buy'
         return 'buy'
 
@@ -97,7 +97,7 @@ def calculate_atr(df, period=14):
 
 
 def calculate_stochastic_rsi(df):
-    df = ta.stochrsi(df['close'])
+    df = ta.stochrsi(df['close'], length=21, rsi_length=21, k=4, d=4)
     print(df)
     return df
 
@@ -118,7 +118,7 @@ def manage_positions(symbol, size):
     global stored_signal
 
     last_10_signals = fetch_last_10_signals()
-    signal = check_for_consecutive_signals(last_10_signals)
+    check_for_consecutive_signals(last_10_signals)
     open_positions = get_open_positions(open_pos_auth)
     current_price = fetch_live_price(symbol)['last_price']
     data = fetch_last_n_candles('XXBTZUSD')  # Function to fetch historical data for ATR calculation
@@ -132,13 +132,13 @@ def manage_positions(symbol, size):
             # Check if the position opened for the symbol is a short
             if position['symbol'] == symbol and position['side'] == 'short':
                 # If buy signal close short position
-                if stored_signal == 'buy':
+                if stored_signal == 'buy' or stoch_check == 'buy':
                     place_order(order_auth, symbol, 'buy', position['size'])
 
             # Check if the position opened for the symbol is a long
             elif position['symbol'] == symbol and position['side'] == 'long':
                 # If sell signal close short position
-                if stored_signal == 'sell':
+                if stored_signal == 'sell' or stoch_check == 'sell':
                     place_order(order_auth, symbol, 'sell', position['size'])
 
     if not open_positions['openPositions']:
@@ -195,7 +195,7 @@ def run_analysis_and_store_signals():
     delta_value_signals = get_spikes(delta_values)
 
     # Calculate final signal
-    final_signal = generate_final_signal(aggressive_ratio_signals, delta_value_signals, cumulative_delta, threshold=10)
+    final_signal = generate_final_signal(aggressive_ratio_signals, delta_value_signals, cumulative_delta, threshold=9)
 
     # Assuming 'volume_profile_signal' and 'price_action_signal' are obtained from other analyses
     volume_profile_signal = "N/A"  # Placeholder
@@ -203,7 +203,7 @@ def run_analysis_and_store_signals():
 
     # Insert the signal into the database
     timestamp = int(datetime.now(timezone.utc).timestamp())
-    insert_signal(timestamp, final_signal, volume_profile_signal, price_action_signal)
+    insert_signal(timestamp, final_signal[0], final_signal[1], volume_profile_signal, price_action_signal)
 
     # Manage positions based on the signals
     manage_positions('PF_XBTUSD', 0.005)

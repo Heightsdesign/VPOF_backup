@@ -86,11 +86,11 @@ def generate_final_signal(aggressive_ratio_signals, delta_value_signals, cumulat
     print('SCORE :', total_score)
 
     if total_score >= threshold:
-        return 'buy'
+        return ['buy', total_score]
     elif total_score <= -threshold:
-        return 'sell'
+        return ['sell', total_score]
     else:
-        return 'hold'
+        return ['hold', total_score]
 
 
 # Function to fetch and display stored signals

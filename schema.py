@@ -29,6 +29,7 @@ CREATE TABLE IF NOT EXISTS signals (
     id INTEGER PRIMARY KEY AUTOINCREMENT,
     timestamp INTEGER,
     order_flow_signal TEXT,
+    order_flow_score INTEGER,
     volume_profile_signal TEXT,
     price_action_signal TEXT
 )
