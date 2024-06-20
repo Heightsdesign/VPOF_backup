@@ -4,6 +4,7 @@ import sqlite3
 import websockets
 from datetime import datetime, timezone
 import pandas as pd
+import pandas_ta as ta
 import constants
 
 from order_flow_tools import calculate_order_flow_metrics
@@ -21,6 +22,7 @@ trade_channel_id = None
 order_auth = KrakenFuturesAuth(constants.kraken_public_key, constants.kraken_private_key, '/api/v3/sendorder')
 open_orders_auth = KrakenFuturesAuth(constants.kraken_public_key, constants.kraken_private_key, '/api/v3/openorders')
 open_pos_auth = KrakenFuturesAuth(constants.kraken_public_key, constants.kraken_private_key, '/api/v3/openpositions')
+stored_signal = None
 
 
 # Function to insert trade data
@@ -43,28 +45,12 @@ def insert_signal(timestamp, order_flow_signal, volume_profile_signal, price_act
     conn.commit()
 
 
-def insert_position(open_price, side, size, highest_price, atr):
+def insert_position(open_price, side, size, highest_price):
     timestamp = int(datetime.now(timezone.utc).timestamp())
     cursor.execute("""
-    INSERT INTO opened_positions (timestamp, open_price, side, size, highest_price, atr)
+    INSERT INTO opened_positions (timestamp, open_price, side, size, highest_price)
     VALUES (?, ?, ?, ?, ?, ?)
-    """, (timestamp, open_price, side, size, highest_price, atr))
-    conn.commit()
-
-
-def update_position(position_id, side, price, size, atr):
-    if side == 'buy':
-        cursor.execute("""
-        UPDATE opened_positions
-        SET highest_price = ?, atr = ?
-        WHERE id = ? AND highest_price < ?
-        """, (price, atr, position_id, price))
-    elif side == 'sell':
-        cursor.execute("""
-        UPDATE opened_positions
-        SET highest_price = ?, atr = ?
-        WHERE id = ? AND highest_price > ?
-        """, (price, atr, position_id, price))
+    """, (timestamp, open_price, side, size, highest_price))
     conn.commit()
 
 
@@ -80,15 +66,21 @@ def close_position(position_id, close_price):
 
 # Function to check if the two most recent signals are 'buy' or 'sell'
 def check_for_consecutive_signals(signals):
-    if len(signals) < 2:
+    global stored_signal
+
+    if len(signals) < 3:
         return None
 
-    last_signal = signals[0][0]
-    second_last_signal = signals[1][0]
+    first_signal = signals[0][0]
+    second_signal = signals[1][0]
+    third_signal = signals[1][0]
 
-    if last_signal == 'buy' and second_last_signal == 'buy':
+    if first_signal == 'buy' and second_signal == 'buy' and third_signal == 'buy' :
+        stored_signal = 'buy'
         return 'buy'
-    elif last_signal == 'sell' and second_last_signal == 'sell':
+
+    if first_signal == 'sell' and second_signal == 'sell' and third_signal == 'sell':
+        stored_signal = 'sell'
         return 'sell'
 
     return None
@@ -104,86 +96,57 @@ def calculate_atr(df, period=14):
     return atr
 
 
+def calculate_stochastic_rsi(df, period=14, smoothK=3, smoothD=3):
+    df['stochrsi_k'] = ta.stochrsi(df['close'], length=period, rsi_length=period, k=smoothK, d=smoothD)['STOCHRSIk_14_3_3']
+    df['stochrsi_d'] = ta.stochrsi(df['close'], length=period, rsi_length=period, k=smoothK, d=smoothD)['STOCHRSId_14_3_3']
+    return df
+
+
+def check_stochastic_setup(df):
+    # Check for buy setup (if %K > %D and %K < 20)
+    if df['stochrsi_d'].iloc[-1] < df['stochrsi_k'].iloc[-1] < 20:
+        return 'buy'
+    # Check for sell setup (if %D > %K and %K > 80)
+    elif df['stochrsi_d'].iloc[-1] > df['stochrsi_k'].iloc[-1] > 80:
+        return 'sell'
+    else:
+        return None
+
+
 def manage_positions(symbol, size):
+    global stored_signal
+
     last_10_signals = fetch_last_10_signals()
     signal = check_for_consecutive_signals(last_10_signals)
     open_positions = get_open_positions(open_pos_auth)
     current_price = fetch_live_price(symbol)['last_price']
-    data = fetch_candles_since('XXBTZUSD')  # Function to fetch historical data for ATR calculation
-    atr = calculate_atr(data)
+    data = fetch_last_n_candles('XXBTZUSD')  # Function to fetch historical data for ATR calculation
+    stoch_data = calculate_stochastic_rsi(data)
+    stoch_check = check_stochastic_setup(stoch_data)
 
     if open_positions and 'openPositions' in open_positions and open_positions['openPositions']:
-        if signal == 'buy':
-            for position in open_positions['openPositions']:
-                if position['symbol'] == symbol and position['side'] == 'short':
+        for position in open_positions['openPositions']:
+            if position['symbol'] == symbol and position['side'] == 'short':
+                if stored_signal == 'buy' and stoch_check == 'buy':
                     place_order(order_auth, symbol, 'buy', position['size'] * 2)
-                    update_position(position['id'], 'buy', current_price, position['size'] * 2, atr)
-                elif position['symbol'] == symbol and position['side'] == 'long':
-                    break
 
-        elif signal == 'sell':
-            for position in open_positions['openPositions']:
-                if position['symbol'] == symbol and position['side'] == 'long':
+            elif position['symbol'] == symbol and position['side'] == 'long':
+                break
+
+        for position in open_positions['openPositions']:
+            if position['symbol'] == symbol and position['side'] == 'long':
+                if stored_signal == 'sell' and stoch_check == 'sell':
                     place_order(order_auth, symbol, 'sell', position['size'] * 2)
-                    update_position(position['id'], 'sell', current_price, position['size'] * 2, atr)
-                elif position['symbol'] == symbol and position['side'] == 'short':
-                    break
+
+            elif position['symbol'] == symbol and position['side'] == 'short':
+                break
 
     elif not open_positions['openPositions']:
-        if signal == 'buy':
+        if stored_signal == 'buy' and stoch_check == 'buy':
             place_order(order_auth, symbol, 'buy', size)
-            insert_position(current_price, 'long', size, current_price, atr)
-        elif signal == 'sell':
+
+        elif stored_signal == 'sell' and stoch_check == 'sell':
             place_order(order_auth, symbol, 'sell', size)
-            insert_position(current_price, 'short', size, current_price, atr)
-
-
-def check_trailing_stop(symbol):
-    cursor.execute("""
-    SELECT id, open_price, side, size, timestamp
-    FROM opened_positions
-    WHERE close_price IS NULL
-    """)
-    open_positions = cursor.fetchall()
-
-    for position in open_positions:
-        position_id, open_price, side, size, open_timestamp = position
-        current_price = fetch_live_price(symbol)['last_price']
-
-        # Fetch historical data since the position was opened
-        historical_data = fetch_candles_since('XXBTZUSD', interval=5, start_time=open_timestamp)
-        atr_data = fetch_last_n_candles('XXBTZUSD')
-        atr = calculate_atr(atr_data, period=14)
-
-        if side == 'long':
-            highest_price = max(historical_data['high'].max(), current_price)
-            if (highest_price - current_price) / atr > 3:
-                place_order(order_auth, symbol, 'sell', size)
-                close_position(position_id, current_price)
-
-        elif side == 'short':
-            lowest_price = min(historical_data['low'].min(), current_price)
-            if (current_price - lowest_price) / atr > 3:
-                place_order(order_auth, symbol, 'buy', size)
-                close_position(position_id, current_price)
-
-
-def get_highest_price_since_open(position_id):
-    cursor.execute("""
-    SELECT MAX(price)
-    FROM trades
-    WHERE timestamp >= (SELECT timestamp FROM opened_positions WHERE id = ?)
-    """, (position_id,))
-    return cursor.fetchone()[0]
-
-
-def get_lowest_price_since_open(position_id):
-    cursor.execute("""
-    SELECT MIN(price)
-    FROM trades
-    WHERE timestamp >= (SELECT timestamp FROM opened_positions WHERE id = ?)
-    """, (position_id,))
-    return cursor.fetchone()[0]
 
 
 # WebSocket handler
@@ -243,14 +206,13 @@ def run_analysis_and_store_signals():
     insert_signal(timestamp, final_signal, volume_profile_signal, price_action_signal)
 
     # Manage positions based on the signals
-    manage_positions('PF_XBTUSD', 0.001)
+    manage_positions('PF_XBTUSD', 0.005)
 
 
 # Periodically run the analysis and store signals
 async def periodic_analysis(interval):
     while True:
         run_analysis_and_store_signals()
-        check_trailing_stop('PF_XBTUSD')
         await asyncio.sleep(interval)
 
 
