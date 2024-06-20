@@ -39,13 +39,11 @@ CREATE TABLE IF NOT EXISTS signals (
 cursor.execute("""
 CREATE TABLE IF NOT EXISTS opened_positions (
     id INTEGER PRIMARY KEY AUTOINCREMENT,
-    kraken_id TEXT,
+    symbol TEXT,
     timestamp INTEGER,
     open_price REAL,
     side TEXT,
     size REAL,
-    highest_price REAL,
-    atr REAL,
     close_price REAL,
     close_time INTEGER
 )
