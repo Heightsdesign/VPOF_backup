@@ -2,3 +2,4 @@ venv/
 .env
 trading_data.db
 __pycache__/
+help_ta.py

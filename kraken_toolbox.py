@@ -84,7 +84,7 @@ def fetch_candles_since(pair, interval=5, start_time=None):
     return df
 
 
-def fetch_last_n_candles(pair, interval=5, num_candles=15):
+def fetch_last_n_candles(pair, interval=5, num_candles=35):
     """
     Fetch the last N OHLC candles from Kraken.
 

@@ -96,18 +96,19 @@ def calculate_atr(df, period=14):
     return atr
 
 
-def calculate_stochastic_rsi(df, period=14, smoothK=3, smoothD=3):
-    df['stochrsi_k'] = ta.stochrsi(df['close'], length=period, rsi_length=period, k=smoothK, d=smoothD)['STOCHRSIk_14_3_3']
-    df['stochrsi_d'] = ta.stochrsi(df['close'], length=period, rsi_length=period, k=smoothK, d=smoothD)['STOCHRSId_14_3_3']
+def calculate_stochastic_rsi(df):
+    df = ta.stochrsi(df['close'])
+    print(df)
     return df
 
 
 def check_stochastic_setup(df):
     # Check for buy setup (if %K > %D and %K < 20)
-    if df['stochrsi_d'].iloc[-1] < df['stochrsi_k'].iloc[-1] < 20:
+    if df['STOCHRSId_14_14_3_3'].iloc[-1] < df['STOCHRSIk_14_14_3_3'].iloc[-1] < 20:
         return 'buy'
+
     # Check for sell setup (if %D > %K and %K > 80)
-    elif df['stochrsi_d'].iloc[-1] > df['stochrsi_k'].iloc[-1] > 80:
+    elif df['STOCHRSId_14_14_3_3'].iloc[-1] > df['STOCHRSIk_14_14_3_3'].iloc[-1] > 80:
         return 'sell'
     else:
         return None
