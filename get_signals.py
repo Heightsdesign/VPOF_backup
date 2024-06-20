@@ -100,10 +100,10 @@ def fetch_and_display_signals():
 
     print("Stored Signals:")
     for signal in signals:
-        signal_id, timestamp, order_flow_signal, volume_profile_signal, price_action_signal = signal
+        signal_id, timestamp, order_flow_signal, orderflow_score, volume_profile_signal, price_action_signal = signal
         readable_timestamp = datetime.fromtimestamp(timestamp, timezone.utc).strftime('%Y-%m-%d %H:%M:%S')
         print(f"ID: {signal_id}, Timestamp: {readable_timestamp}, Order Flow Signal: {order_flow_signal}, "
-              f"Volume Profile Signal: {volume_profile_signal}, Price Action Signal: {price_action_signal}")
+              f"Order Flow Score: {orderflow_score}")
 
     return signals
 
@@ -118,7 +118,7 @@ def fetch_last_buy_signal():
     """)
     last_buy_signal = cursor.fetchone()
     if last_buy_signal:
-        signal_id, timestamp, order_flow_signal, orderflow_score, volume_profile_signal, price_action_signal = signal
+        signal_id, timestamp, order_flow_signal, orderflow_score, volume_profile_signal, price_action_signal = last_buy_signal
         readable_timestamp = datetime.fromtimestamp(timestamp, timezone.utc).strftime('%Y-%m-%d %H:%M:%S')
         print(f"ID: {signal_id}, Timestamp: {readable_timestamp}, Order Flow Signal: {order_flow_signal}, "
               f"Order Flow Score: {orderflow_score}")
@@ -138,7 +138,7 @@ def fetch_last_sell_signal():
     """)
     last_sell_signal = cursor.fetchone()
     if last_sell_signal:
-        signal_id, timestamp, order_flow_signal, orderflow_score, volume_profile_signal, price_action_signal = signal
+        signal_id, timestamp, order_flow_signal, orderflow_score, volume_profile_signal, price_action_signal = last_sell_signal
         readable_timestamp = datetime.fromtimestamp(timestamp, timezone.utc).strftime('%Y-%m-%d %H:%M:%S')
         print(f"ID: {signal_id}, Timestamp: {readable_timestamp}, Order Flow Signal: {order_flow_signal}, "
               f"Order Flow Score: {orderflow_score}")
