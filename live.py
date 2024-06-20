@@ -40,7 +40,7 @@ def insert_signal(
         timestamp, order_flow_signal, order_flow_score, volume_profile_signal, price_action_signal):
     cursor.execute("""
     INSERT INTO signals (timestamp, order_flow_signal, order_flow_score, volume_profile_signal, price_action_signal)
-    VALUES (?, ?, ?, ?)
+    VALUES (?, ?, ?, ?, ?)
     """, (timestamp, order_flow_signal, order_flow_score, volume_profile_signal, price_action_signal))
     conn.commit()
 
@@ -104,11 +104,11 @@ def calculate_stochastic_rsi(df):
 
 def check_stochastic_setup(df):
     # Check for buy setup (if %K > %D and %K < 20)
-    if df['STOCHRSId_14_14_3_3'].iloc[-1] < df['STOCHRSIk_14_14_3_3'].iloc[-1] < 20:
+    if df['STOCHRSId_21_21_4_4'].iloc[-1] < df['STOCHRSIk_21_21_4_4'].iloc[-1] < 20:
         return 'buy'
 
     # Check for sell setup (if %D > %K and %K > 80)
-    elif df['STOCHRSId_14_14_3_3'].iloc[-1] > df['STOCHRSIk_14_14_3_3'].iloc[-1] > 80:
+    elif df['STOCHRSId_21_21_4_4'].iloc[-1] > df['STOCHRSIk_21_21_4_4'].iloc[-1] > 80:
         return 'sell'
     else:
         return None
