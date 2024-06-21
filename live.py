@@ -51,7 +51,7 @@ def insert_signal(
 def insert_position(symbol, open_price, side, size, take_profit):
     timestamp = int(datetime.now(timezone.utc).timestamp())
     cursor.execute("""
-    INSERT INTO opened_positions (timestamp, symbol, open_price, side, size, take_profit)
+    INSERT INTO opened_positions (symbol, timestamp, open_price, side, size, take_profit)
     VALUES (?, ?, ?, ?, ?, ?)
     """, (symbol, timestamp, open_price, side, size, take_profit))
     conn.commit()
@@ -62,10 +62,9 @@ def close_position(position_id, close_price):
     cursor.execute("""
     UPDATE opened_positions
     SET close_price = ?, close_time = ?
-    WHERE kraken_id = ?
+    WHERE id = ?
     """, (close_price, close_time, position_id))
     conn.commit()
-
 
 def fetch_open_position(symbol):
     cursor.execute("""
@@ -224,18 +223,15 @@ def calculate_williams_fractals(df, period=7):
 def manage_positions(symbol, size):
     global stored_signal
 
+    # Fetch recent signals and check for consecutive signals
     last_10_signals = fetch_last_10_signals()
     check_for_consecutive_signals(last_10_signals)
 
-    # data = fetch_last_n_candles('XXBTZUSD')
-    # fractals_data = calculate_williams_fractals(data)
-
-    # signals = fetch_last_4_hours_signals()
-    # market_sentiment = get_overall_pressure(signals)
-
+    # Fetch positions and current price
     open_positions = get_open_positions(open_pos_auth)
     current_price = fetch_live_price(symbol)['last_price']
 
+    # Fetch open position from the database
     db_positions = fetch_open_position(symbol)
     rsi_value = get_rsi('XXBTZUSD')
 
@@ -243,26 +239,22 @@ def manage_positions(symbol, size):
     print('RSI:', rsi_value)
     calculate_average_move('XXBTZUSD')
 
+    # Extract position details if there are open positions in the database
     if db_positions:
-        position_id, pos_symbol, open_timestamp, open_price, side, size,  tp, sl, close_price, close_time = db_positions[-1]
+        position_id, pos_symbol, open_timestamp, open_price, side, size, tp, sl, close_price, close_time = db_positions[-1]
 
-    # Check if there are opened positions if so check closing conditions
+    # Check for open positions via API
     if open_positions and 'openPositions' in open_positions and open_positions['openPositions']:
         print('Open positions from API:', open_positions['openPositions'])
         for position in open_positions['openPositions']:
-            # Check if the position opened for the symbol is a short
             if position['symbol'] == symbol and position['side'] == 'short':
                 print('Evaluating short position for symbol:', symbol)
-                # If buy signal close short position
                 if stored_signal != 'sell' or current_price <= tp:
                     print('Closing short position and opening long position.')
                     place_order(order_auth, symbol, 'buy', position['size'])
                     close_position(position_id, current_price)
-
-            # Check if the position opened for the symbol is a long
             elif position['symbol'] == symbol and position['side'] == 'long':
                 print('Evaluating long position for symbol:', symbol)
-                # If sell signal close short position
                 if stored_signal != 'buy' or current_price >= tp:
                     print('Closing long position and opening short position.')
                     place_order(order_auth, symbol, 'sell', position['size'])
@@ -275,14 +267,11 @@ def manage_positions(symbol, size):
             print('Placing new buy order.')
             place_order(order_auth, symbol, 'buy', size)
             take_profit = get_take_profit('XXBTZUSD', 'buy', current_price)
-
             insert_position(symbol, current_price, 'long', size, take_profit)
-
         elif stored_signal == 'sell':
             print('Placing new sell order.')
             place_order(order_auth, symbol, 'sell', size)
             take_profit = get_take_profit('XXBTZUSD', 'sell', current_price)
-
             insert_position(symbol, current_price, 'short', size, take_profit)
 
 
