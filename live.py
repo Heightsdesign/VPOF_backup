@@ -92,9 +92,13 @@ def check_for_consecutive_signals(signals):
         stored_signal = 'buy'
         return 'buy'
 
-    if first_signal == 'sell' and second_signal == 'sell' and third_signal == 'sell':
+    elif first_signal == 'sell' and second_signal == 'sell' and third_signal == 'sell':
         stored_signal = 'sell'
         return 'sell'
+
+    elif first_signal == 'hold' and second_signal == 'hold' and third_signal == 'hold':
+        stored_signal = 'hold'
+        return 'hold'
 
     return None
 
@@ -153,7 +157,7 @@ def calculate_rsi(df, period=14):
     return df['rsi'].iloc[-1]
 
 
-def get_rsi(symbol, period=7):
+def get_rsi(symbol, period=14):
     data = fetch_last_n_candles(symbol, num_candles=period+1)  # Fetch the required historical data
     rsi_value = calculate_rsi(data, period)
     return rsi_value
@@ -172,6 +176,7 @@ def calculate_average_move(symbol):
 
     # Calculate the average move
     average_move = df['move'].mean()
+    print(average_move)
 
     return average_move
 
@@ -181,9 +186,9 @@ def get_take_profit(symbol, side, current_price):
     take_profit = None
 
     if side == 'buy':
-        take_profit = current_price + (average_move / 2)
+        take_profit = current_price + (average_move / 1.5)
     if side =='sell':
-        take_profit = current_price - (average_move / 2)
+        take_profit = current_price - (average_move / 1.5)
 
     return take_profit
 
@@ -219,14 +224,14 @@ def calculate_williams_fractals(df, period=7):
 def manage_positions(symbol, size):
     global stored_signal
 
-    # last_10_signals = fetch_last_10_signals()
-    # check_for_consecutive_signals(last_10_signals)
+    last_10_signals = fetch_last_10_signals()
+    check_for_consecutive_signals(last_10_signals)
 
     # data = fetch_last_n_candles('XXBTZUSD')
     # fractals_data = calculate_williams_fractals(data)
 
-    signals = fetch_last_4_hours_signals()
-    market_sentiment = get_overall_pressure(signals)
+    # signals = fetch_last_4_hours_signals()
+    # market_sentiment = get_overall_pressure(signals)
 
     open_positions = get_open_positions(open_pos_auth)
     current_price = fetch_live_price(symbol)['last_price']
@@ -236,6 +241,7 @@ def manage_positions(symbol, size):
 
     print('Open positions from DB:', db_positions)
     print('RSI:', rsi_value)
+    calculate_average_move('XXBTZUSD')
 
     if db_positions:
         position_id, pos_symbol, open_timestamp, open_price, side, size,  tp, sl, close_price, close_time = db_positions[-1]
@@ -248,7 +254,7 @@ def manage_positions(symbol, size):
             if position['symbol'] == symbol and position['side'] == 'short':
                 print('Evaluating short position for symbol:', symbol)
                 # If buy signal close short position
-                if market_sentiment == 'buy' or current_price <= tp:
+                if stored_signal != 'sell' or current_price <= tp:
                     print('Closing short position and opening long position.')
                     place_order(order_auth, symbol, 'buy', position['size'])
                     close_position(position_id, current_price)
@@ -257,7 +263,7 @@ def manage_positions(symbol, size):
             elif position['symbol'] == symbol and position['side'] == 'long':
                 print('Evaluating long position for symbol:', symbol)
                 # If sell signal close short position
-                if market_sentiment == 'sell' or current_price >= tp:
+                if stored_signal != 'buy' or current_price >= tp:
                     print('Closing long position and opening short position.')
                     place_order(order_auth, symbol, 'sell', position['size'])
                     close_position(position_id, current_price)
@@ -265,17 +271,17 @@ def manage_positions(symbol, size):
     # Conditions to OPEN positions
     if not open_positions['openPositions']:
         print('No open positions found.')
-        if market_sentiment == 'buy' and rsi_value <= 30:
+        if stored_signal == 'buy':
             print('Placing new buy order.')
             place_order(order_auth, symbol, 'buy', size)
-            take_profit = get_take_profit('XXBTZUSD', market_sentiment, current_price)
+            take_profit = get_take_profit('XXBTZUSD', 'buy', current_price)
 
             insert_position(symbol, current_price, 'long', size, take_profit)
 
-        elif market_sentiment == 'sell' and rsi_value >= 70:
+        elif stored_signal == 'sell':
             print('Placing new sell order.')
             place_order(order_auth, symbol, 'sell', size)
-            take_profit = get_take_profit('XXBTZUSD', market_sentiment, current_price)
+            take_profit = get_take_profit('XXBTZUSD', 'sell', current_price)
 
             insert_position(symbol, current_price, 'short', size, take_profit)
 
