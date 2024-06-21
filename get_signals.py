@@ -170,9 +170,23 @@ def fetch_last_24_hours_signals():
     return last_24_hours_signals
 
 
+def fetch_last_4_hours_signals():
+    current_time = datetime.now(timezone.utc)
+    start_timestamp = int((current_time - timedelta(hours=4)).timestamp())
+
+    cursor.execute("""
+    SELECT order_flow_signal, order_flow_score FROM signals 
+    WHERE timestamp >= ? 
+    ORDER BY timestamp DESC
+    """, (start_timestamp,))
+    last_4_hours_signals = cursor.fetchall()
+
+    return last_4_hours_signals
+
+
 def fetch_last_10_signals():
     cursor.execute("""
-    SELECT order_flow_signal FROM signals 
+    SELECT order_flow_signal, order_flow_score FROM signals 
     ORDER BY timestamp DESC
     LIMIT 10
     """)
@@ -204,6 +218,9 @@ fetch_last_sell_signal()
 
 # Fetch and display today's signals
 fetch_last_24_hours_signals()
+
+# Fetch last 4 hours signals
+# print(fetch_last_4_hours_signals())
 
 # Fetch last ten signals
 # print(fetch_last_10_signals())

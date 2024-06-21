@@ -9,7 +9,7 @@ import numpy as np
 import constants
 
 from order_flow_tools import calculate_order_flow_metrics
-from get_signals import get_spikes, generate_final_signal, fetch_last_10_signals
+from get_signals import get_spikes, generate_final_signal, fetch_last_10_signals, fetch_last_4_hours_signals
 from kraken_toolbox import (get_open_positions, place_order, fetch_candles_since,
                             fetch_live_price, fetch_last_n_candles, KrakenFuturesAuth)
 
@@ -48,12 +48,12 @@ def insert_signal(
     conn.commit()
 
 
-def insert_position(symbol, open_price, side, size, highest_price):
+def insert_position(symbol, open_price, side, size, take_profit):
     timestamp = int(datetime.now(timezone.utc).timestamp())
     cursor.execute("""
-    INSERT INTO opened_positions (kraken_id, timestamp, open_price, side, size, highest_price)
-    VALUES (?, ?, ?, ?, ?, ?, ?)
-    """, (symbol, timestamp, open_price, side, size, highest_price))
+    INSERT INTO opened_positions (timestamp, symbol, open_price, side, size, take_profit)
+    VALUES (?, ?, ?, ?, ?, ?)
+    """, (symbol, timestamp, open_price, side, size, take_profit))
     conn.commit()
 
 
@@ -99,6 +99,27 @@ def check_for_consecutive_signals(signals):
     return None
 
 
+def get_overall_pressure(signals):
+
+    pressure = 0
+    rating = None
+
+    for signal in signals:
+        pressure += signal[1]
+
+    if pressure >= len(signals) * 5:
+        rating = "buy"
+    elif len(signals) * 5 > pressure > len(signals) * -5:
+        rating = "hold"
+    elif pressure <= len(signals) * -5:
+        rating = "sell"
+
+    print("Pressure : ", pressure)
+    print("Market Sentiment : ", rating)
+
+    return rating
+
+
 def calculate_atr(df, period=14):
     df['previous_close'] = df['close'].shift(1)
     df['H-L'] = df['high'] - df['low']
@@ -127,14 +148,54 @@ def check_stochastic_setup(df):
         return None
 
 
+def calculate_rsi(df, period=14):
+    df['rsi'] = ta.rsi(df['close'], length=period)
+    return df['rsi'].iloc[-1]
+
+
+def get_rsi(symbol, period=7):
+    data = fetch_last_n_candles(symbol, num_candles=period+1)  # Fetch the required historical data
+    rsi_value = calculate_rsi(data, period)
+    return rsi_value
+
+
+def calculate_average_move(symbol):
+    # Fetch the 4-hour data for the symbol
+    df = fetch_last_n_candles(symbol, interval=240, num_candles=60)
+
+    # Ensure the data is in the correct format
+    df['time'] = pd.to_datetime(df['time'])
+    df.set_index('time', inplace=True)
+
+    # Calculate the move for each 4-hour candle
+    df['move'] = df['high'] - df['low']
+
+    # Calculate the average move
+    average_move = df['move'].mean()
+
+    return average_move
+
+
+def get_take_profit(symbol, side, current_price):
+    average_move = calculate_average_move(symbol)
+    take_profit = None
+
+    if side == 'buy':
+        take_profit = current_price + (average_move / 2)
+    if side =='sell':
+        take_profit = current_price - (average_move / 2)
+
+    return take_profit
+
+
 def calculate_williams_fractals(df, period=7):
     # Ensure that the high and low columns are numeric and replace non-numeric with NaN
     df['high'] = pd.to_numeric(df['high'], errors='coerce')
     df['low'] = pd.to_numeric(df['low'], errors='coerce')
 
     # Ensure all values are numeric (convert NaN to a very small number)
-    df['high'].fillna(value=np.nan, inplace=True)
-    df['low'].fillna(value=np.nan, inplace=True)
+    df['high'] = df['high'].fillna(value=np.nan)
+    df['low'] = df['low'].fillna(value=np.nan)
 
     # Calculate the Williams Fractals
     def fractal_up(series):
@@ -158,43 +219,65 @@ def calculate_williams_fractals(df, period=7):
 def manage_positions(symbol, size):
     global stored_signal
 
-    last_10_signals = fetch_last_10_signals()
-    check_for_consecutive_signals(last_10_signals)
+    # last_10_signals = fetch_last_10_signals()
+    # check_for_consecutive_signals(last_10_signals)
+
+    # data = fetch_last_n_candles('XXBTZUSD')
+    # fractals_data = calculate_williams_fractals(data)
+
+    signals = fetch_last_4_hours_signals()
+    market_sentiment = get_overall_pressure(signals)
+
     open_positions = get_open_positions(open_pos_auth)
     current_price = fetch_live_price(symbol)['last_price']
-    data = fetch_last_n_candles('XXBTZUSD')
-    fractals_data = calculate_williams_fractals(data)
+
     db_positions = fetch_open_position(symbol)
+    rsi_value = get_rsi('XXBTZUSD')
+
+    print('Open positions from DB:', db_positions)
+    print('RSI:', rsi_value)
 
     if db_positions:
-        position_id, open_price, side, size, open_timestamp, close_price, close_time = db_positions[-1]
+        position_id, pos_symbol, open_timestamp, open_price, side, size,  tp, sl, close_price, close_time = db_positions[-1]
 
-    # Check if there are opened positions
+    # Check if there are opened positions if so check closing conditions
     if open_positions and 'openPositions' in open_positions and open_positions['openPositions']:
+        print('Open positions from API:', open_positions['openPositions'])
         for position in open_positions['openPositions']:
-
             # Check if the position opened for the symbol is a short
             if position['symbol'] == symbol and position['side'] == 'short':
+                print('Evaluating short position for symbol:', symbol)
                 # If buy signal close short position
-                if stored_signal == 'buy' and not pd.isna(fractals_data['fractal_down'].iloc[-1]):
+                if market_sentiment == 'buy' or current_price <= tp:
+                    print('Closing short position and opening long position.')
                     place_order(order_auth, symbol, 'buy', position['size'])
                     close_position(position_id, current_price)
 
             # Check if the position opened for the symbol is a long
             elif position['symbol'] == symbol and position['side'] == 'long':
+                print('Evaluating long position for symbol:', symbol)
                 # If sell signal close short position
-                if stored_signal == 'sell' and not pd.isna(fractals_data['fractal_up'].iloc[-1]):
+                if market_sentiment == 'sell' or current_price >= tp:
+                    print('Closing long position and opening short position.')
                     place_order(order_auth, symbol, 'sell', position['size'])
                     close_position(position_id, current_price)
 
+    # Conditions to OPEN positions
     if not open_positions['openPositions']:
-        if stored_signal == 'buy' and not pd.isna(fractals_data['fractal_down'].iloc[-1]):
+        print('No open positions found.')
+        if market_sentiment == 'buy' and rsi_value <= 30:
+            print('Placing new buy order.')
             place_order(order_auth, symbol, 'buy', size)
-            insert_position(symbol, current_price, 'long', size, current_price)
+            take_profit = get_take_profit('XXBTZUSD', market_sentiment, current_price)
 
-        elif stored_signal == 'sell' and not pd.isna(fractals_data['fractal_up'].iloc[-1]):
+            insert_position(symbol, current_price, 'long', size, take_profit)
+
+        elif market_sentiment == 'sell' and rsi_value >= 70:
+            print('Placing new sell order.')
             place_order(order_auth, symbol, 'sell', size)
-            insert_position(symbol, current_price, 'short', size, current_price)
+            take_profit = get_take_profit('XXBTZUSD', market_sentiment, current_price)
+
+            insert_position(symbol, current_price, 'short', size, take_profit)
 
 
 # WebSocket handler
@@ -213,7 +296,7 @@ async def kraken_websocket():
         while True:
             message = await websocket.recv()
             data = json.loads(message)
-            print("Received data:", data)  # Enhanced logging
+            # print("Received data:", data)  # Enhanced logging
 
             # Handle subscription status messages
             if isinstance(data, dict) and data.get("event") == "subscriptionStatus":
@@ -228,7 +311,7 @@ async def kraken_websocket():
                 if channel_id == trade_channel_id:
                     trades = data[1]
                     insert_trade(trades)
-                    print(f"Inserted trade data")
+                    # print(f"Inserted trade data")
 
 
 # Function to check for trailing stop using fractals
@@ -284,7 +367,7 @@ def run_analysis_and_store_signals():
 
     # Manage positions based on the signals
     manage_positions('PF_XBTUSD', 0.005)
-    check_trailing_stop('PF_XBTUSD')
+    # check_trailing_stop('PF_XBTUSD')
 
 
 # Periodically run the analysis and store signals
