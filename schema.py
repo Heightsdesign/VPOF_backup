@@ -30,6 +30,7 @@ CREATE TABLE IF NOT EXISTS signals (
     timestamp INTEGER,
     order_flow_signal TEXT,
     order_flow_score INTEGER,
+    market_pressure REAL,
     volume_profile_signal TEXT,
     price_action_signal TEXT
 )

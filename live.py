@@ -9,7 +9,10 @@ import numpy as np
 import constants
 
 from order_flow_tools import calculate_order_flow_metrics
-from get_signals import get_spikes, generate_final_signal, fetch_last_10_signals, fetch_last_4_hours_signals
+
+from get_signals import (get_spikes, generate_final_signal, market_sentiment_eval,
+                         fetch_last_10_signals, fetch_last_4_hours_signals)
+
 from kraken_toolbox import (get_open_positions, place_order, fetch_candles_since,
                             fetch_live_price, fetch_last_n_candles, KrakenFuturesAuth)
 
@@ -40,11 +43,11 @@ def insert_trade(trades):
 
 
 def insert_signal(
-        timestamp, order_flow_signal, order_flow_score, volume_profile_signal, price_action_signal):
+        timestamp, order_flow_signal, order_flow_score, market_pressure, volume_profile_signal, price_action_signal):
     cursor.execute("""
-    INSERT INTO signals (timestamp, order_flow_signal, order_flow_score, volume_profile_signal, price_action_signal)
-    VALUES (?, ?, ?, ?, ?)
-    """, (timestamp, order_flow_signal, order_flow_score, volume_profile_signal, price_action_signal))
+    INSERT INTO signals (timestamp, order_flow_signal, order_flow_score, market_pressure, volume_profile_signal, price_action_signal)
+    VALUES (?, ?, ?, ?, ?, ?)
+    """, (timestamp, order_flow_signal, order_flow_score, market_pressure, volume_profile_signal, price_action_signal))
     conn.commit()
 
 
@@ -65,6 +68,7 @@ def close_position(position_id, close_price):
     WHERE id = ?
     """, (close_price, close_time, position_id))
     conn.commit()
+
 
 def fetch_open_position(symbol):
     cursor.execute("""
@@ -102,27 +106,6 @@ def check_for_consecutive_signals(signals):
     return None
 
 
-def get_overall_pressure(signals):
-
-    pressure = 0
-    rating = None
-
-    for signal in signals:
-        pressure += signal[1]
-
-    if pressure >= len(signals) * 5:
-        rating = "buy"
-    elif len(signals) * 5 > pressure > len(signals) * -5:
-        rating = "hold"
-    elif pressure <= len(signals) * -5:
-        rating = "sell"
-
-    print("Pressure : ", pressure)
-    print("Market Sentiment : ", rating)
-
-    return rating
-
-
 def calculate_atr(df, period=14):
     df['previous_close'] = df['close'].shift(1)
     df['H-L'] = df['high'] - df['low']
@@ -134,19 +117,23 @@ def calculate_atr(df, period=14):
 
 
 def calculate_stochastic_rsi(df):
-    df = ta.stochrsi(df['close'], length=21, rsi_length=21, k=4, d=4)
-    print(df)
+    df = ta.stochrsi(df['close'], length=14, rsi_length=14, k=3, d=3)
+    # print(df)
     return df
 
 
 def check_stochastic_setup(df):
+
+    print(df.iloc[-1])
+
     # Check for buy setup (if %K > %D and %K < 20)
-    if df['STOCHRSId_21_21_4_4'].iloc[-1] < df['STOCHRSIk_21_21_4_4'].iloc[-1] < 20:
+    if df['STOCHRSId_14_14_3_3'].iloc[-1] < df['STOCHRSIk_14_14_3_3'].iloc[-1] < 20:
         return 'buy'
 
     # Check for sell setup (if %D > %K and %K > 80)
-    elif df['STOCHRSId_21_21_4_4'].iloc[-1] > df['STOCHRSIk_21_21_4_4'].iloc[-1] > 80:
+    elif df['STOCHRSId_14_14_3_3'].iloc[-1] > df['STOCHRSIk_14_14_3_3'].iloc[-1] > 80:
         return 'sell'
+
     else:
         return None
 
@@ -164,7 +151,7 @@ def get_rsi(symbol, period=14):
 
 def calculate_average_move(symbol):
     # Fetch the 4-hour data for the symbol
-    df = fetch_last_n_candles(symbol, interval=240, num_candles=60)
+    df = fetch_last_n_candles(symbol, interval=60, num_candles=60)
 
     # Ensure the data is in the correct format
     df['time'] = pd.to_datetime(df['time'])
@@ -185,9 +172,9 @@ def get_take_profit(symbol, side, current_price):
     take_profit = None
 
     if side == 'buy':
-        take_profit = current_price + (average_move / 1.5)
-    if side =='sell':
-        take_profit = current_price - (average_move / 1.5)
+        take_profit = current_price + (average_move / 1)
+    if side == 'sell':
+        take_profit = current_price - (average_move / 1)
 
     return take_profit
 
@@ -224,8 +211,17 @@ def manage_positions(symbol, size):
     global stored_signal
 
     # Fetch recent signals and check for consecutive signals
-    last_10_signals = fetch_last_10_signals()
-    check_for_consecutive_signals(last_10_signals)
+    # last_10_signals = fetch_last_10_signals()
+    # check_for_consecutive_signals(last_10_signals)
+
+    # Market sentiment
+    sentiment_signals = fetch_last_4_hours_signals()
+    market_sentiment = market_sentiment_eval(sentiment_signals)[1]
+
+    # Check stochastic setup
+    df = fetch_last_n_candles('XXBTZUSD', num_candles=60)
+    rsi_df = calculate_stochastic_rsi(df)
+    stoch_setup = check_stochastic_setup(rsi_df)
 
     # Fetch positions and current price
     open_positions = get_open_positions(open_pos_auth)
@@ -236,7 +232,7 @@ def manage_positions(symbol, size):
     rsi_value = get_rsi('XXBTZUSD')
 
     print('Open positions from DB:', db_positions)
-    print('RSI:', rsi_value)
+    # print('RSI:', rsi_value)
     calculate_average_move('XXBTZUSD')
 
     # Extract position details if there are open positions in the database
@@ -249,13 +245,13 @@ def manage_positions(symbol, size):
         for position in open_positions['openPositions']:
             if position['symbol'] == symbol and position['side'] == 'short':
                 print('Evaluating short position for symbol:', symbol)
-                if stored_signal != 'sell' or current_price <= tp:
+                if stoch_setup == 'buy' or current_price <= tp:
                     print('Closing short position and opening long position.')
                     place_order(order_auth, symbol, 'buy', position['size'])
                     close_position(position_id, current_price)
             elif position['symbol'] == symbol and position['side'] == 'long':
                 print('Evaluating long position for symbol:', symbol)
-                if stored_signal != 'buy' or current_price >= tp:
+                if stoch_setup == 'sell' or current_price >= tp:
                     print('Closing long position and opening short position.')
                     place_order(order_auth, symbol, 'sell', position['size'])
                     close_position(position_id, current_price)
@@ -263,12 +259,12 @@ def manage_positions(symbol, size):
     # Conditions to OPEN positions
     if not open_positions['openPositions']:
         print('No open positions found.')
-        if stored_signal == 'buy':
+        if market_sentiment == 'buy' and stoch_setup == 'buy':
             print('Placing new buy order.')
             place_order(order_auth, symbol, 'buy', size)
             take_profit = get_take_profit('XXBTZUSD', 'buy', current_price)
             insert_position(symbol, current_price, 'long', size, take_profit)
-        elif stored_signal == 'sell':
+        elif stored_signal == 'sell' and stoch_setup == 'sell':
             print('Placing new sell order.')
             place_order(order_auth, symbol, 'sell', size)
             take_profit = get_take_profit('XXBTZUSD', 'sell', current_price)
@@ -352,16 +348,20 @@ def run_analysis_and_store_signals():
     # Calculate final signal
     final_signal = generate_final_signal(aggressive_ratio_signals, delta_value_signals, cumulative_delta, threshold=9)
 
+    # Market sentiment
+    sentiment_signals = fetch_last_4_hours_signals()
+    market_pressure = market_sentiment_eval(sentiment_signals)[0]
+
     # Assuming 'volume_profile_signal' and 'price_action_signal' are obtained from other analyses
     volume_profile_signal = "N/A"  # Placeholder
     price_action_signal = "N/A"  # Placeholder
 
     # Insert the signal into the database
     timestamp = int(datetime.now(timezone.utc).timestamp())
-    insert_signal(timestamp, final_signal[0], final_signal[1], volume_profile_signal, price_action_signal)
+    insert_signal(timestamp, final_signal[0], final_signal[1], market_pressure, volume_profile_signal, price_action_signal)
 
     # Manage positions based on the signals
-    manage_positions('PF_XBTUSD', 0.005)
+    manage_positions('PF_XBTUSD', 0.002)
     # check_trailing_stop('PF_XBTUSD')
 
 

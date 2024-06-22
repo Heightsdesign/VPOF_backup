@@ -42,6 +42,27 @@ def get_spikes(data):
     return signals
 
 
+def market_sentiment_eval(signals):
+
+    pressure = 0
+    rating = None
+
+    for signal in signals:
+        pressure += signal[1]
+
+    if pressure >= len(signals) * 5:
+        rating = "buy"
+    elif len(signals) * 5 > pressure > len(signals) * -5:
+        rating = "hold"
+    elif pressure <= len(signals) * -5:
+        rating = "sell"
+
+    print("Pressure : ", pressure)
+    print("Market Sentiment : ", rating)
+
+    return [pressure, rating]
+
+
 # Function to score signals and generate a final decision
 def generate_final_signal(aggressive_ratio_signals, delta_value_signals, cumulative_delta, threshold):
     rating_score = {
@@ -100,10 +121,10 @@ def fetch_and_display_signals():
 
     print("Stored Signals:")
     for signal in signals:
-        signal_id, timestamp, order_flow_signal, orderflow_score, volume_profile_signal, price_action_signal = signal
+        signal_id, timestamp, order_flow_signal, orderflow_score, market_pressure, volume_profile_signal, price_action_signal = signal
         readable_timestamp = datetime.fromtimestamp(timestamp, timezone.utc).strftime('%Y-%m-%d %H:%M:%S')
         print(f"ID: {signal_id}, Timestamp: {readable_timestamp}, Order Flow Signal: {order_flow_signal}, "
-              f"Order Flow Score: {orderflow_score}")
+              f"Order Flow Score: {orderflow_score}, Market Pressure: {market_pressure}")
 
     return signals
 
@@ -118,10 +139,10 @@ def fetch_last_buy_signal():
     """)
     last_buy_signal = cursor.fetchone()
     if last_buy_signal:
-        signal_id, timestamp, order_flow_signal, orderflow_score, volume_profile_signal, price_action_signal = last_buy_signal
+        signal_id, timestamp, order_flow_signal, orderflow_score, market_pressure, volume_profile_signal, price_action_signal = last_buy_signal
         readable_timestamp = datetime.fromtimestamp(timestamp, timezone.utc).strftime('%Y-%m-%d %H:%M:%S')
         print(f"ID: {signal_id}, Timestamp: {readable_timestamp}, Order Flow Signal: {order_flow_signal}, "
-              f"Order Flow Score: {orderflow_score}")
+              f"Order Flow Score: {orderflow_score}, Market Pressure: {market_pressure}")
     else:
         print("No 'buy' signals found.")
 
@@ -138,10 +159,10 @@ def fetch_last_sell_signal():
     """)
     last_sell_signal = cursor.fetchone()
     if last_sell_signal:
-        signal_id, timestamp, order_flow_signal, orderflow_score, volume_profile_signal, price_action_signal = last_sell_signal
+        signal_id, timestamp, order_flow_signal, orderflow_score, market_pressure, volume_profile_signal, price_action_signal = last_sell_signal
         readable_timestamp = datetime.fromtimestamp(timestamp, timezone.utc).strftime('%Y-%m-%d %H:%M:%S')
         print(f"ID: {signal_id}, Timestamp: {readable_timestamp}, Order Flow Signal: {order_flow_signal}, "
-              f"Order Flow Score: {orderflow_score}")
+              f"Order Flow Score: {orderflow_score} , Market Pressure: {market_pressure}")
     else:
         print("No 'sell' signals found.")
 
@@ -162,10 +183,10 @@ def fetch_last_24_hours_signals():
 
     print("Signals from the Past 24 Hours:")
     for signal in last_24_hours_signals:
-        signal_id, timestamp, order_flow_signal, orderflow_score, volume_profile_signal, price_action_signal = signal
+        signal_id, timestamp, order_flow_signal, orderflow_score, market_pressure, volume_profile_signal, price_action_signal = signal
         readable_timestamp = datetime.fromtimestamp(timestamp, timezone.utc).strftime('%Y-%m-%d %H:%M:%S')
         print(f"ID: {signal_id}, Timestamp: {readable_timestamp}, Order Flow Signal: {order_flow_signal}, "
-              f"Order Flow Score: {orderflow_score}")
+              f"Order Flow Score: {orderflow_score}, Market Pressure: {market_pressure}")
 
     return last_24_hours_signals
 
