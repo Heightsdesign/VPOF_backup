@@ -81,27 +81,27 @@ def fetch_open_position(symbol):
 
 
 # Function to check if the two most recent signals are 'buy' or 'sell'
-def check_for_consecutive_signals(signals):
+def check_short_term_activity(signals):
     global stored_signal
 
     if len(signals) < 3:
         return None
 
-    first_signal = signals[0][0]
-    second_signal = signals[1][0]
-    third_signal = signals[2][0]
+    buys = 0
+    sells = 0
 
-    if first_signal == 'buy' and second_signal == 'buy' and third_signal == 'buy':
-        stored_signal = 'buy'
+    for signal in signals:
+        if signal[0] == 'buy' or signal[0] == 'hold':
+            buys += 1
+            sells = 0
+        elif signal[0] == 'sell' or signal[0] == 'hold':
+            sells += 1
+            buys = 0
+
+    if buys >= 3:
         return 'buy'
-
-    elif first_signal == 'sell' and second_signal == 'sell' and third_signal == 'sell':
-        stored_signal = 'sell'
+    elif sells >= 3:
         return 'sell'
-
-    elif first_signal == 'hold' and second_signal == 'hold' and third_signal == 'hold':
-        stored_signal = 'hold'
-        return 'hold'
 
     return None
 
@@ -211,8 +211,8 @@ def manage_positions(symbol, size):
     global stored_signal
 
     # Fetch recent signals and check for consecutive signals
-    # last_10_signals = fetch_last_10_signals()
-    # check_for_consecutive_signals(last_10_signals)
+    last_10_signals = fetch_last_10_signals()
+    short_term_activity = check_short_term_activity(last_10_signals)
 
     # Market sentiment
     sentiment_signals = fetch_last_4_hours_signals()
@@ -229,7 +229,7 @@ def manage_positions(symbol, size):
 
     # Fetch open position from the database
     db_positions = fetch_open_position(symbol)
-    rsi_value = get_rsi('XXBTZUSD')
+    # rsi_value = get_rsi('XXBTZUSD')
 
     print('Open positions from DB:', db_positions)
     # print('RSI:', rsi_value)
@@ -237,7 +237,8 @@ def manage_positions(symbol, size):
 
     # Extract position details if there are open positions in the database
     if db_positions:
-        position_id, pos_symbol, open_timestamp, open_price, side, size, tp, sl, close_price, close_time = db_positions[-1]
+        (position_id, pos_symbol, open_timestamp, open_price,
+         side, size, tp, sl, close_price, close_time) = db_positions[-1]
 
     # Check for open positions via API
     if open_positions and 'openPositions' in open_positions and open_positions['openPositions']:
@@ -259,12 +260,12 @@ def manage_positions(symbol, size):
     # Conditions to OPEN positions
     if not open_positions['openPositions']:
         print('No open positions found.')
-        if market_sentiment == 'buy' and stoch_setup == 'buy':
+        if market_sentiment == 'buy' and stoch_setup == 'buy' and short_term_activity != 'sell':
             print('Placing new buy order.')
             place_order(order_auth, symbol, 'buy', size)
             take_profit = get_take_profit('XXBTZUSD', 'buy', current_price)
             insert_position(symbol, current_price, 'long', size, take_profit)
-        elif stored_signal == 'sell' and stoch_setup == 'sell':
+        elif stored_signal == 'sell' and stoch_setup == 'sell' and short_term_activity != 'buy':
             print('Placing new sell order.')
             place_order(order_auth, symbol, 'sell', size)
             take_profit = get_take_profit('XXBTZUSD', 'sell', current_price)
