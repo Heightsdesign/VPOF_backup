@@ -233,6 +233,8 @@ def manage_positions(symbol, size):
 
     print('Open positions from DB:', db_positions)
     # print('RSI:', rsi_value)
+    print('Stochastic Setup : ', stoch_setup)
+    print('Short Term aActivity : ', short_term_activity)
     calculate_average_move('XXBTZUSD')
 
     # Extract position details if there are open positions in the database
