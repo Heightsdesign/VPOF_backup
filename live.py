@@ -102,8 +102,8 @@ def check_short_term_activity(signals):
         return 'buy'
     elif sells >= 3:
         return 'sell'
-
-    return None
+    else:
+        return 'hold'
 
 
 def calculate_atr(df, period=14):
@@ -234,7 +234,7 @@ def manage_positions(symbol, size):
     print('Open positions from DB:', db_positions)
     # print('RSI:', rsi_value)
     print('Stochastic Setup : ', stoch_setup)
-    print('Short Term aActivity : ', short_term_activity)
+    print('Short Term Activity : ', short_term_activity)
     calculate_average_move('XXBTZUSD')
 
     # Extract position details if there are open positions in the database
@@ -252,6 +252,7 @@ def manage_positions(symbol, size):
                     print('Closing short position and opening long position.')
                     place_order(order_auth, symbol, 'buy', position['size'])
                     close_position(position_id, current_price)
+
             elif position['symbol'] == symbol and position['side'] == 'long':
                 print('Evaluating long position for symbol:', symbol)
                 if stoch_setup == 'sell' or current_price >= tp:
@@ -262,12 +263,14 @@ def manage_positions(symbol, size):
     # Conditions to OPEN positions
     if not open_positions['openPositions']:
         print('No open positions found.')
+
         if market_sentiment == 'buy' and stoch_setup == 'buy' and short_term_activity != 'sell':
             print('Placing new buy order.')
             place_order(order_auth, symbol, 'buy', size)
             take_profit = get_take_profit('XXBTZUSD', 'buy', current_price)
             insert_position(symbol, current_price, 'long', size, take_profit)
-        elif stored_signal == 'sell' and stoch_setup == 'sell' and short_term_activity != 'buy':
+
+        elif market_sentiment == 'sell' and stoch_setup == 'sell' and short_term_activity != 'buy':
             print('Placing new sell order.')
             place_order(order_auth, symbol, 'sell', size)
             take_profit = get_take_profit('XXBTZUSD', 'sell', current_price)
