@@ -91,10 +91,10 @@ def check_short_term_activity(signals):
     sells = 0
 
     for signal in signals:
-        if signal[0] == 'buy' or signal[0] == 'hold':
+        if signal[0] == 'buy':
             buys += 1
             sells = 0
-        elif signal[0] == 'sell' or signal[0] == 'hold':
+        elif signal[0] == 'sell':
             sells += 1
             buys = 0
 
