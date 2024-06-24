@@ -51,12 +51,12 @@ def insert_signal(
     conn.commit()
 
 
-def insert_position(symbol, open_price, side, size, take_profit):
+def insert_position(symbol, open_price, side, size, take_profit, stop_loss):
     timestamp = int(datetime.now(timezone.utc).timestamp())
     cursor.execute("""
-    INSERT INTO opened_positions (symbol, timestamp, open_price, side, size, take_profit)
-    VALUES (?, ?, ?, ?, ?, ?)
-    """, (symbol, timestamp, open_price, side, size, take_profit))
+    INSERT INTO opened_positions (symbol, timestamp, open_price, side, size, take_profit, stop_loss)
+    VALUES (?, ?, ?, ?, ?, ?, ?)
+    """, (symbol, timestamp, open_price, side, size, take_profit, stop_loss))
     conn.commit()
 
 
@@ -167,16 +167,19 @@ def calculate_average_move(symbol):
     return average_move
 
 
-def get_take_profit(symbol, side, current_price):
+def get_stops(symbol, side, current_price):
     average_move = calculate_average_move(symbol)
     take_profit = None
+    stop_loss = None
 
     if side == 'buy':
-        take_profit = current_price + (average_move / 1)
+        take_profit = current_price + average_move
+        stop_loss = current_price - average_move
     if side == 'sell':
-        take_profit = current_price - (average_move / 1)
+        take_profit = current_price - average_move
+        stop_loss = current_price + average_move
 
-    return take_profit
+    return take_profit, stop_loss
 
 
 def calculate_williams_fractals(df, period=7):
@@ -267,14 +270,14 @@ def manage_positions(symbol, size):
         if market_sentiment == 'buy' and stoch_setup == 'buy' and short_term_activity != 'sell':
             print('Placing new buy order.')
             place_order(order_auth, symbol, 'buy', size)
-            take_profit = get_take_profit('XXBTZUSD', 'buy', current_price)
-            insert_position(symbol, current_price, 'long', size, take_profit)
+            take_profit, stop_loss = get_stops('XXBTZUSD', 'buy', current_price)
+            insert_position(symbol, current_price, 'long', size, take_profit, stop_loss)
 
         elif market_sentiment == 'sell' and stoch_setup == 'sell' and short_term_activity != 'buy':
             print('Placing new sell order.')
             place_order(order_auth, symbol, 'sell', size)
-            take_profit = get_take_profit('XXBTZUSD', 'sell', current_price)
-            insert_position(symbol, current_price, 'short', size, take_profit)
+            take_profit, stop_loss = get_stops('XXBTZUSD', 'sell', current_price)
+            insert_position(symbol, current_price, 'long', size, take_profit, stop_loss)
 
 
 # WebSocket handler
