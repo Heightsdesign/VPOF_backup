@@ -50,11 +50,11 @@ def market_sentiment_eval(signals):
     for signal in signals:
         pressure += signal[1]
 
-    if pressure >= len(signals) * 3:
+    if pressure >= len(signals) * 4:
         rating = "buy"
-    elif len(signals) * 5 > pressure > len(signals) * -5:
+    elif len(signals) * 4 > pressure > len(signals) * -4:
         rating = "hold"
-    elif pressure <= len(signals) * -3:
+    elif pressure <= len(signals) * -4:
         rating = "sell"
 
     print("Pressure : ", pressure)

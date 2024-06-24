@@ -251,14 +251,14 @@ def manage_positions(symbol, size):
         for position in open_positions['openPositions']:
             if position['symbol'] == symbol and position['side'] == 'short':
                 print('Evaluating short position for symbol:', symbol)
-                if stoch_setup == 'buy' or current_price <= tp:
+                if stoch_setup == 'buy' or current_price <= tp or current_price >= sl:
                     print('Closing short position and opening long position.')
                     place_order(order_auth, symbol, 'buy', position['size'])
                     close_position(position_id, current_price)
 
             elif position['symbol'] == symbol and position['side'] == 'long':
                 print('Evaluating long position for symbol:', symbol)
-                if stoch_setup == 'sell' or current_price >= tp:
+                if stoch_setup == 'sell' or current_price >= tp or current_price <= sl:
                     print('Closing long position and opening short position.')
                     place_order(order_auth, symbol, 'sell', position['size'])
                     close_position(position_id, current_price)
