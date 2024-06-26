@@ -127,11 +127,11 @@ def check_stochastic_setup(df):
     print(df.iloc[-1])
 
     # Check for buy setup (if %K > %D and %K < 20)
-    if df['STOCHRSId_14_14_3_3'].iloc[-1] < df['STOCHRSIk_14_14_3_3'].iloc[-1] < 20:
+    if df['STOCHRSId_14_14_3_3'].iloc[-1] and df['STOCHRSIk_14_14_3_3'].iloc[-1] < 20:
         return 'buy'
 
     # Check for sell setup (if %D > %K and %K > 80)
-    elif df['STOCHRSId_14_14_3_3'].iloc[-1] > df['STOCHRSIk_14_14_3_3'].iloc[-1] > 80:
+    elif df['STOCHRSId_14_14_3_3'].iloc[-1] and df['STOCHRSIk_14_14_3_3'].iloc[-1] > 80:
         return 'sell'
 
     else:
@@ -176,8 +176,8 @@ def get_stops(symbol, side, current_price):
         take_profit = current_price + average_move
         stop_loss = current_price - average_move
     if side == 'sell':
-        take_profit = current_price - average_move
-        stop_loss = current_price + average_move
+        take_profit = current_price - (average_move / 2)
+        stop_loss = current_price + (average_move / 2)
 
     return take_profit, stop_loss
 
@@ -251,14 +251,14 @@ def manage_positions(symbol, size):
         for position in open_positions['openPositions']:
             if position['symbol'] == symbol and position['side'] == 'short':
                 print('Evaluating short position for symbol:', symbol)
-                if stoch_setup == 'buy' or current_price <= tp or current_price >= sl:
+                if stoch_setup == 'buy' or current_price <= tp or current_price >= sl or short_term_activity == 'buy':
                     print('Closing short position and opening long position.')
                     place_order(order_auth, symbol, 'buy', position['size'])
                     close_position(position_id, current_price)
 
             elif position['symbol'] == symbol and position['side'] == 'long':
                 print('Evaluating long position for symbol:', symbol)
-                if stoch_setup == 'sell' or current_price >= tp or current_price <= sl:
+                if stoch_setup == 'sell' or current_price >= tp or current_price <= sl or short_term_activity == 'sell':
                     print('Closing long position and opening short position.')
                     place_order(order_auth, symbol, 'sell', position['size'])
                     close_position(position_id, current_price)
