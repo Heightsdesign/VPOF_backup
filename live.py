@@ -176,8 +176,8 @@ def get_stops(symbol, side, current_price):
         take_profit = current_price + average_move
         stop_loss = current_price - average_move
     if side == 'sell':
-        take_profit = current_price - (average_move / 2)
-        stop_loss = current_price + (average_move / 2)
+        take_profit = current_price - average_move
+        stop_loss = current_price + average_move
 
     return take_profit, stop_loss
 
