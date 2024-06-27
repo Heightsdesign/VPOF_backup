@@ -127,11 +127,11 @@ def check_stochastic_setup(df):
     print(df.iloc[-1])
 
     # Check for buy setup (if %K > %D and %K < 20)
-    if df['STOCHRSId_14_14_3_3'].iloc[-1] and df['STOCHRSIk_14_14_3_3'].iloc[-1] < 20:
+    if df['STOCHRSId_14_14_3_3'].iloc[-1] < df['STOCHRSIk_14_14_3_3'].iloc[-1] < 20:
         return 'buy'
 
     # Check for sell setup (if %D > %K and %K > 80)
-    elif df['STOCHRSId_14_14_3_3'].iloc[-1] and df['STOCHRSIk_14_14_3_3'].iloc[-1] > 80:
+    elif df['STOCHRSId_14_14_3_3'].iloc[-1] > df['STOCHRSIk_14_14_3_3'].iloc[-1] > 80:
         return 'sell'
 
     else:
