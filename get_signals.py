@@ -214,14 +214,29 @@ def fetch_last_10_signals():
     return cursor.fetchall()
 
 
-def fetch_all_open_positions():
+def fetch_all_opened_positions():
     cursor.execute("""
     SELECT *
     FROM opened_positions
-    WHERE close_price IS NULL
     """)
-    open_positions = cursor.fetchall()
-    return open_positions
+    opened_positions = cursor.fetchall()
+
+    formatted_positions = []
+    for pos in opened_positions:
+        formatted_positions.append({
+            'ID': pos[0],
+            'Symbol': pos[1],
+            'Timestamp': datetime.fromtimestamp(pos[2]),
+            'Open Price': pos[3],
+            'Side': pos[4],
+            'Size': pos[5],
+            'Take Profit': pos[6],
+            'Stop Loss': pos[7],
+            'Close Price': pos[8],
+            'Close Time': datetime.fromtimestamp(pos[9]) if pos[9] else None,
+            'Close Reason': pos[10]
+        })
+    return formatted_positions
 
 
 def fetch_positions_opened_last_day():
@@ -229,10 +244,43 @@ def fetch_positions_opened_last_day():
     cursor.execute("""
     SELECT *
     FROM opened_positions
-    WHERE timestamp >= ? AND close_price IS NULL
+    WHERE timestamp >= ?
     """, (one_day_ago,))
-    open_positions_last_day = cursor.fetchall()
-    return open_positions_last_day
+    opened_positions = cursor.fetchall()
+
+    formatted_positions = []
+    for pos in opened_positions:
+        formatted_positions.append({
+            'ID': pos[0],
+            'Symbol': pos[1],
+            'Timestamp': datetime.fromtimestamp(pos[2]),
+            'Open Price': pos[3],
+            'Side': pos[4],
+            'Size': pos[5],
+            'Take Profit': pos[6],
+            'Stop Loss': pos[7],
+            'Close Price': pos[8],
+            'Close Time': datetime.fromtimestamp(pos[9]) if pos[9] else None,
+            'Close Reason': pos[10]
+        })
+
+    return formatted_positions
+
+
+def print_positions(positions):
+    for pos in positions:
+        print(f"ID: {pos['ID']}")
+        print(f"Symbol: {pos['Symbol']}")
+        print(f"Timestamp: {pos['Timestamp']}")
+        print(f"Open Price: {pos['Open Price']}")
+        print(f"Side: {pos['Side']}")
+        print(f"Size: {pos['Size']}")
+        print(f"Take Profit: {pos['Take Profit']}")
+        print(f"Stop Loss: {pos['Stop Loss']}")
+        print(f"Close Price: {pos['Close Price']}")
+        print(f"Close Time: {pos['Close Time']}")
+        print(f"Close Reason: {pos['Close Reason']}")
+        print("-" * 30)
 
 
 """__________________________________________________________________________________________________________________"""
@@ -268,12 +316,12 @@ fetch_last_24_hours_signals()
 # print(fetch_last_10_signals())
 
 # Retrieve all open positions
-# all_open_positions = fetch_all_open_positions()
-# print("All open positions:", all_open_positions)
+# all_opened_positions = fetch_all_opened_positions()
+# print_positions(all_opened_positions)
 
 # Retrieve positions opened during the past day
 positions_opened_last_day = fetch_positions_opened_last_day()
-print("Positions opened in the last 24 hours:", positions_opened_last_day)
+print_positions(positions_opened_last_day)
 
 
 # Close the database connection

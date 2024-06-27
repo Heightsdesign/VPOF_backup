@@ -243,7 +243,7 @@ def manage_positions(symbol, size):
     # Extract position details if there are open positions in the database
     if db_positions:
         (position_id, pos_symbol, open_timestamp, open_price,
-         side, size, tp, sl, close_price, close_time) = db_positions[-1]
+         side, size, tp, sl, close_reason, close_price, close_time) = db_positions[-1]
 
     # Check for open positions via API
     if open_positions and 'openPositions' in open_positions and open_positions['openPositions']:

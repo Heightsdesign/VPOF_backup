@@ -55,8 +55,14 @@ CREATE TABLE IF NOT EXISTS opened_positions (
 """)
 
 
+cursor.execute("""
+ALTER TABLE opened_positions ADD COLUMN close_reason TEXT
+""")
+
+
 # Execute SQL commands to create tables
 cursor.execute(create_trades_table)
+
 
 # Commit changes and close the connection
 conn.commit()
