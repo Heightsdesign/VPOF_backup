@@ -214,6 +214,27 @@ def fetch_last_10_signals():
     return cursor.fetchall()
 
 
+def fetch_all_open_positions():
+    cursor.execute("""
+    SELECT *
+    FROM opened_positions
+    WHERE close_price IS NULL
+    """)
+    open_positions = cursor.fetchall()
+    return open_positions
+
+
+def fetch_positions_opened_last_day():
+    one_day_ago = int((datetime.now(timezone.utc) - timedelta(days=1)).timestamp())
+    cursor.execute("""
+    SELECT *
+    FROM opened_positions
+    WHERE timestamp >= ? AND close_price IS NULL
+    """, (one_day_ago,))
+    open_positions_last_day = cursor.fetchall()
+    return open_positions_last_day
+
+
 """__________________________________________________________________________________________________________________"""
 
 # Example usage with your data
@@ -245,6 +266,15 @@ fetch_last_24_hours_signals()
 
 # Fetch last ten signals
 # print(fetch_last_10_signals())
+
+# Retrieve all open positions
+# all_open_positions = fetch_all_open_positions()
+# print("All open positions:", all_open_positions)
+
+# Retrieve positions opened during the past day
+positions_opened_last_day = fetch_positions_opened_last_day()
+print("Positions opened in the last 24 hours:", positions_opened_last_day)
+
 
 # Close the database connection
 # conn.close()

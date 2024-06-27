@@ -60,11 +60,11 @@ def insert_position(symbol, open_price, side, size, take_profit, stop_loss):
     conn.commit()
 
 
-def close_position(position_id, close_price):
+def close_position(position_id, close_reason, close_price):
     close_time = int(datetime.now(timezone.utc).timestamp())
     cursor.execute("""
     UPDATE opened_positions
-    SET close_price = ?, close_time = ?
+    SET close_reason = ?, close_price = ?, close_time = ?
     WHERE id = ?
     """, (close_price, close_time, position_id))
     conn.commit()
@@ -251,17 +251,49 @@ def manage_positions(symbol, size):
         for position in open_positions['openPositions']:
             if position['symbol'] == symbol and position['side'] == 'short':
                 print('Evaluating short position for symbol:', symbol)
-                if stoch_setup == 'buy' or current_price <= tp or current_price >= sl or short_term_activity == 'buy':
-                    print('Closing short position and opening long position.')
+
+                if stoch_setup == 'buy':
+                    print('Closing short position due to stochastic setup.')
                     place_order(order_auth, symbol, 'buy', position['size'])
-                    close_position(position_id, current_price)
+                    close_position(position_id, 'stochastic_setup', current_price)
+
+                elif current_price <= tp:
+                    print('Closing short position due to take profit.')
+                    place_order(order_auth, symbol, 'buy', position['size'])
+                    close_position(position_id, 'take_profit', current_price)
+
+                elif current_price >= sl:
+                    print('Closing short position due to stop loss.')
+                    place_order(order_auth, symbol, 'buy', position['size'])
+                    close_position(position_id, 'stop_loss', current_price)
+
+                elif short_term_activity == 'buy':
+                    print('Closing short position short term reversal.')
+                    place_order(order_auth, symbol, 'buy', position['size'])
+                    close_position(position_id, 'short_term_reversal', current_price)
 
             elif position['symbol'] == symbol and position['side'] == 'long':
                 print('Evaluating long position for symbol:', symbol)
-                if stoch_setup == 'sell' or current_price >= tp or current_price <= sl or short_term_activity == 'sell':
-                    print('Closing long position and opening short position.')
+
+                if stoch_setup == 'sell':
+                    print('Closing long position stochastic setup')
                     place_order(order_auth, symbol, 'sell', position['size'])
-                    close_position(position_id, current_price)
+                    close_position(position_id, 'stochastic_setup', current_price)
+
+                elif current_price >= tp:
+                    print('Closing long position due to take profit')
+                    place_order(order_auth, symbol, 'sell', position['size'])
+                    close_position(position_id, 'take_profit', current_price)
+
+                elif current_price <= sl:
+                    print('Closing long position due to stop loss')
+                    place_order(order_auth, symbol, 'sell', position['size'])
+                    close_position(position_id, 'stop_loss', current_price)
+
+                elif short_term_activity == 'sell':
+                    print('Closing long position due to short term reversal.')
+                    place_order(order_auth, symbol, 'sell', position['size'])
+                    close_position(position_id, 'short_term_reversal', current_price)
 
     # Conditions to OPEN positions
     if not open_positions['openPositions']:

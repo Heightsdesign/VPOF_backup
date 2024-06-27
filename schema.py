@@ -47,6 +47,7 @@ CREATE TABLE IF NOT EXISTS opened_positions (
     size REAL,
     take_profit REAL,
     stop_loss REAL,
+    close_reason TEXT,
     close_price REAL,
     close_time INTEGER
 )
