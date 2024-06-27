@@ -191,9 +191,9 @@ def fetch_last_24_hours_signals():
     return last_24_hours_signals
 
 
-def fetch_last_4_hours_signals():
+def fetch_last_n_hours_signals(hours):
     current_time = datetime.now(timezone.utc)
-    start_timestamp = int((current_time - timedelta(hours=4)).timestamp())
+    start_timestamp = int((current_time - timedelta(hours=hours)).timestamp())
 
     cursor.execute("""
     SELECT order_flow_signal, order_flow_score FROM signals 

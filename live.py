@@ -11,7 +11,7 @@ import constants
 from order_flow_tools import calculate_order_flow_metrics
 
 from get_signals import (get_spikes, generate_final_signal, market_sentiment_eval,
-                         fetch_last_10_signals, fetch_last_4_hours_signals)
+                         fetch_last_10_signals, fetch_last_n_hours_signals)
 
 from kraken_toolbox import (get_open_positions, place_order, fetch_candles_since,
                             fetch_live_price, fetch_last_n_candles, KrakenFuturesAuth)
@@ -218,7 +218,7 @@ def manage_positions(symbol, size):
     short_term_activity = check_short_term_activity(last_10_signals)
 
     # Market sentiment
-    sentiment_signals = fetch_last_4_hours_signals()
+    sentiment_signals = fetch_last_n_hours_signals(1)
     market_sentiment = market_sentiment_eval(sentiment_signals)[1]
 
     # Check stochastic setup
@@ -390,7 +390,7 @@ def run_analysis_and_store_signals():
     final_signal = generate_final_signal(aggressive_ratio_signals, delta_value_signals, cumulative_delta, threshold=9)
 
     # Market sentiment
-    sentiment_signals = fetch_last_4_hours_signals()
+    sentiment_signals = fetch_last_n_hours_signals(1)
     market_pressure = market_sentiment_eval(sentiment_signals)[0]
 
     # Assuming 'volume_profile_signal' and 'price_action_signal' are obtained from other analyses
