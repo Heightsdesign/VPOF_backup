@@ -264,7 +264,7 @@ def manage_positions(symbol, size):
 
     slope = calculate_slope_pressure(short_term_pressure)
     upper_threshold, lower_threshold = define_thresholds(long_term_pressure)
-
+    print('Pressure Slope : ', slope)
     print('Open positions from DB:', db_positions)
     # print('RSI:', rsi_value)
     print('Stochastic Setup : ', stoch_setup)
@@ -330,13 +330,13 @@ def manage_positions(symbol, size):
     if not open_positions['openPositions']:
         print('No open positions found.')
 
-        if market_sentiment == 'buy' and stoch_setup == 'buy' and short_term_activity != 'sell' and slope > 0:
+        if market_sentiment == 'buy' and stoch_setup == 'buy' and short_term_activity != 'sell' and slope < 0:
             print('Placing new buy order.')
             place_order(order_auth, symbol, 'buy', size)
             take_profit, stop_loss = get_stops('XXBTZUSD', 'buy', current_price)
             insert_position(symbol, current_price, 'long', size, take_profit, stop_loss)
 
-        elif market_sentiment == 'sell' and stoch_setup == 'sell' and short_term_activity != 'buy' and slope < 0:
+        elif market_sentiment == 'sell' and stoch_setup == 'sell' and short_term_activity != 'buy' and slope > 0:
             print('Placing new sell order.')
             place_order(order_auth, symbol, 'sell', size)
             take_profit, stop_loss = get_stops('XXBTZUSD', 'sell', current_price)
