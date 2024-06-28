@@ -207,7 +207,7 @@ def fetch_last_n_hours_signals(hours):
 
 def fetch_last_10_signals():
     cursor.execute("""
-    SELECT order_flow_signal, order_flow_score FROM signals 
+    SELECT order_flow_signal, order_flow_score, market_pressure FROM signals 
     ORDER BY timestamp DESC
     LIMIT 10
     """)

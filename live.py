@@ -7,11 +7,13 @@ import pandas_ta as ta
 import pandas as pd
 import numpy as np
 import constants
+from sklearn.linear_model import LinearRegression
+
 
 from order_flow_tools import calculate_order_flow_metrics
 
 from get_signals import (get_spikes, generate_final_signal, market_sentiment_eval,
-                         fetch_last_10_signals, fetch_last_n_hours_signals)
+                         fetch_last_10_signals, fetch_last_n_hours_signals, fetch_last_24_hours_signals)
 
 from kraken_toolbox import (get_open_positions, place_order, fetch_candles_since,
                             fetch_live_price, fetch_last_n_candles, KrakenFuturesAuth)
@@ -66,7 +68,7 @@ def close_position(position_id, close_reason, close_price):
     UPDATE opened_positions
     SET close_reason = ?, close_price = ?, close_time = ?
     WHERE id = ?
-    """, (close_price, close_time, position_id))
+    """, (close_reason, close_price, close_time, position_id))
     conn.commit()
 
 
@@ -210,6 +212,26 @@ def calculate_williams_fractals(df, period=7):
     return df
 
 
+def calculate_slope_pressure(pressure_data):
+
+    x = np.arange(len(pressure_data)).reshape(-1, 1)
+    y = np.array(pressure_data).reshape(-1, 1)
+    model = LinearRegression().fit(x, y)
+    slope = model.coef_[0][0]
+
+    return slope
+
+
+def define_thresholds(pressure_data):
+
+    mean_pressure = np.mean(pressure_data)
+    std_pressure = np.std(pressure_data)
+    upper_threshold = mean_pressure + 1.5 * std_pressure
+    lower_threshold = mean_pressure - 1.5 * std_pressure
+
+    return upper_threshold, lower_threshold
+
+
 def manage_positions(symbol, size):
     global stored_signal
 
@@ -220,6 +242,9 @@ def manage_positions(symbol, size):
     # Market sentiment
     sentiment_signals = fetch_last_n_hours_signals(1)
     market_sentiment = market_sentiment_eval(sentiment_signals)[1]
+
+    # Daily signals
+    daily_signals = fetch_last_24_hours_signals()
 
     # Check stochastic setup
     df = fetch_last_n_candles('XXBTZUSD', num_candles=60)
@@ -233,6 +258,12 @@ def manage_positions(symbol, size):
     # Fetch open position from the database
     db_positions = fetch_open_position(symbol)
     # rsi_value = get_rsi('XXBTZUSD')
+
+    short_term_pressure = [signal[2] for signal in last_10_signals]
+    long_term_pressure = [signal[4] for signal in daily_signals]
+
+    slope = calculate_slope_pressure(short_term_pressure)
+    upper_threshold, lower_threshold = define_thresholds(long_term_pressure)
 
     print('Open positions from DB:', db_positions)
     # print('RSI:', rsi_value)
@@ -299,13 +330,13 @@ def manage_positions(symbol, size):
     if not open_positions['openPositions']:
         print('No open positions found.')
 
-        if market_sentiment == 'buy' and stoch_setup == 'buy' and short_term_activity != 'sell':
+        if market_sentiment == 'buy' and stoch_setup == 'buy' and short_term_activity != 'sell' and slope > 0:
             print('Placing new buy order.')
             place_order(order_auth, symbol, 'buy', size)
             take_profit, stop_loss = get_stops('XXBTZUSD', 'buy', current_price)
             insert_position(symbol, current_price, 'long', size, take_profit, stop_loss)
 
-        elif market_sentiment == 'sell' and stoch_setup == 'sell' and short_term_activity != 'buy':
+        elif market_sentiment == 'sell' and stoch_setup == 'sell' and short_term_activity != 'buy' and slope < 0:
             print('Placing new sell order.')
             place_order(order_auth, symbol, 'sell', size)
             take_profit, stop_loss = get_stops('XXBTZUSD', 'sell', current_price)
