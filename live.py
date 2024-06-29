@@ -129,11 +129,11 @@ def check_stochastic_setup(df):
     print(df.iloc[-1])
 
     # Check for buy setup (if %K > %D and %K < 20)
-    if df['STOCHRSId_14_14_3_3'].iloc[-1] < df['STOCHRSIk_14_14_3_3'].iloc[-1] < 20:
+    if df['STOCHRSId_14_14_3_3'].iloc[-1] < df['STOCHRSIk_14_14_3_3'].iloc[-1]:
         return 'buy'
 
     # Check for sell setup (if %D > %K and %K > 80)
-    elif df['STOCHRSId_14_14_3_3'].iloc[-1] > df['STOCHRSIk_14_14_3_3'].iloc[-1] > 80:
+    elif df['STOCHRSId_14_14_3_3'].iloc[-1] > df['STOCHRSIk_14_14_3_3'].iloc[-1]:
         return 'sell'
 
     else:
@@ -259,7 +259,7 @@ def manage_positions(symbol, size):
     db_positions = fetch_open_position(symbol)
     # rsi_value = get_rsi('XXBTZUSD')
 
-    short_term_pressure = [signal[2] for signal in last_10_signals]
+    short_term_pressure = [signal[2] for signal in last_10_signals[:8]]
     long_term_pressure = [signal[4] for signal in daily_signals]
 
     slope = calculate_slope_pressure(short_term_pressure)
@@ -298,7 +298,7 @@ def manage_positions(symbol, size):
                     place_order(order_auth, symbol, 'buy', position['size'])
                     close_position(position_id, 'stop_loss', current_price)
 
-                elif short_term_activity == 'buy':
+                elif slope > 0:
                     print('Closing short position short term reversal.')
                     place_order(order_auth, symbol, 'buy', position['size'])
                     close_position(position_id, 'short_term_reversal', current_price)
@@ -321,7 +321,7 @@ def manage_positions(symbol, size):
                     place_order(order_auth, symbol, 'sell', position['size'])
                     close_position(position_id, 'stop_loss', current_price)
 
-                elif short_term_activity == 'sell':
+                elif slope < 0:
                     print('Closing long position due to short term reversal.')
                     place_order(order_auth, symbol, 'sell', position['size'])
                     close_position(position_id, 'short_term_reversal', current_price)
@@ -330,13 +330,13 @@ def manage_positions(symbol, size):
     if not open_positions['openPositions']:
         print('No open positions found.')
 
-        if market_sentiment == 'buy' and stoch_setup == 'buy' and short_term_activity != 'sell' and slope < 0:
+        if stoch_setup == 'buy' and slope < 0:
             print('Placing new buy order.')
             place_order(order_auth, symbol, 'buy', size)
             take_profit, stop_loss = get_stops('XXBTZUSD', 'buy', current_price)
             insert_position(symbol, current_price, 'long', size, take_profit, stop_loss)
 
-        elif market_sentiment == 'sell' and stoch_setup == 'sell' and short_term_activity != 'buy' and slope > 0:
+        elif stoch_setup == 'sell' and slope > 0:
             print('Placing new sell order.')
             place_order(order_auth, symbol, 'sell', size)
             take_profit, stop_loss = get_stops('XXBTZUSD', 'sell', current_price)
