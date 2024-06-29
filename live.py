@@ -153,7 +153,7 @@ def get_rsi(symbol, period=14):
 
 def calculate_average_move(symbol):
     # Fetch the 4-hour data for the symbol
-    df = fetch_last_n_candles(symbol, interval=60, num_candles=60)
+    df = fetch_last_n_candles(symbol, interval=30, num_candles=60)
 
     # Ensure the data is in the correct format
     df['time'] = pd.to_datetime(df['time'])
@@ -283,12 +283,7 @@ def manage_positions(symbol, size):
             if position['symbol'] == symbol and position['side'] == 'short':
                 print('Evaluating short position for symbol:', symbol)
 
-                if stoch_setup == 'buy':
-                    print('Closing short position due to stochastic setup.')
-                    place_order(order_auth, symbol, 'buy', position['size'])
-                    close_position(position_id, 'stochastic_setup', current_price)
-
-                elif current_price <= tp:
+                if current_price <= tp:
                     print('Closing short position due to take profit.')
                     place_order(order_auth, symbol, 'buy', position['size'])
                     close_position(position_id, 'take_profit', current_price)
@@ -298,7 +293,7 @@ def manage_positions(symbol, size):
                     place_order(order_auth, symbol, 'buy', position['size'])
                     close_position(position_id, 'stop_loss', current_price)
 
-                elif slope > 0:
+                elif slope < 0:
                     print('Closing short position short term reversal.')
                     place_order(order_auth, symbol, 'buy', position['size'])
                     close_position(position_id, 'short_term_reversal', current_price)
@@ -306,12 +301,7 @@ def manage_positions(symbol, size):
             elif position['symbol'] == symbol and position['side'] == 'long':
                 print('Evaluating long position for symbol:', symbol)
 
-                if stoch_setup == 'sell':
-                    print('Closing long position stochastic setup')
-                    place_order(order_auth, symbol, 'sell', position['size'])
-                    close_position(position_id, 'stochastic_setup', current_price)
-
-                elif current_price >= tp:
+                if current_price >= tp:
                     print('Closing long position due to take profit')
                     place_order(order_auth, symbol, 'sell', position['size'])
                     close_position(position_id, 'take_profit', current_price)
@@ -321,7 +311,7 @@ def manage_positions(symbol, size):
                     place_order(order_auth, symbol, 'sell', position['size'])
                     close_position(position_id, 'stop_loss', current_price)
 
-                elif slope < 0:
+                elif slope > 0:
                     print('Closing long position due to short term reversal.')
                     place_order(order_auth, symbol, 'sell', position['size'])
                     close_position(position_id, 'short_term_reversal', current_price)
@@ -340,7 +330,7 @@ def manage_positions(symbol, size):
             print('Placing new sell order.')
             place_order(order_auth, symbol, 'sell', size)
             take_profit, stop_loss = get_stops('XXBTZUSD', 'sell', current_price)
-            insert_position(symbol, current_price, 'long', size, take_profit, stop_loss)
+            insert_position(symbol, current_price, 'short', size, take_profit, stop_loss)
 
 
 # WebSocket handler

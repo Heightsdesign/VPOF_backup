@@ -27,7 +27,9 @@ def get_spikes(data):
     # Iterate over the data and determine signals based on thresholds
     for i, value in enumerate(data):
         abs_value = abs(value)
-        if abs_value > median_val * 6:
+        if abs_value > median_val * 8:
+            rating = 'behemoth'
+        elif abs_value > median_val * 6:
             rating = 'very_strong'
         elif abs_value > median_val * 4:
             rating = 'strong'
@@ -69,6 +71,7 @@ def generate_final_signal(aggressive_ratio_signals, delta_value_signals, cumulat
         'mild': 1,
         'strong': 2,
         'very_strong': 3,
+        'behemoth': 4
     }
 
     pos_ratios = 0
