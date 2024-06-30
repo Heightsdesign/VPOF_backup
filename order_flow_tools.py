@@ -2,6 +2,7 @@ import sqlite3
 from datetime import datetime, timezone, timedelta
 import numpy as np
 from sklearn.linear_model import LinearRegression
+import pandas as pd
 
 
 # Variables
@@ -208,6 +209,7 @@ print(f"Aggressive Ratios: {aggressive_ratios}")
 slope_of_aggressive_ratios = calculate_slope(aggressive_ratios)
 print(f"Slope of Aggressive Ratios: {slope_of_aggressive_ratios}")
 print('\n')
+
 
 # Close the database connection
 # conn.close()

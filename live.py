@@ -2,7 +2,7 @@ import asyncio
 import json
 import sqlite3
 import websockets
-from datetime import datetime, timezone
+from datetime import datetime, timezone, timedelta
 import pandas_ta as ta
 import pandas as pd
 import numpy as np
@@ -30,6 +30,32 @@ open_orders_auth = KrakenFuturesAuth(constants.kraken_public_key, constants.krak
 open_pos_auth = KrakenFuturesAuth(constants.kraken_public_key, constants.kraken_private_key, '/api/v3/openpositions')
 stored_signal = None
 position_ids = {}
+
+
+def fetch_trades(minutes=240):
+
+    # Calculate the timestamp for the starting point
+    current_time = datetime.now()
+    start_time = current_time - timedelta(minutes=minutes)
+    start_timestamp = int(start_time.timestamp())
+
+    # Fetch trades from the database
+    cursor.execute("""
+    SELECT timestamp, price, volume, side, type_order
+    FROM trades
+    WHERE timestamp >= ?
+    ORDER BY timestamp ASC
+    """, (start_timestamp))
+
+    trades = cursor.fetchall()
+
+    # Convert to DataFrame
+    trade_data = pd.DataFrame(trades, columns=['timestamp', 'price', 'volume', 'side', 'type_order'])
+
+    # Convert timestamp to datetime
+    trade_data['timestamp'] = pd.to_datetime(trade_data['timestamp'], unit='s')
+
+    return trade_data
 
 
 # Function to insert trade data
@@ -149,6 +175,38 @@ def get_rsi(symbol, period=14):
     data = fetch_last_n_candles(symbol, num_candles=period+1)  # Fetch the required historical data
     rsi_value = calculate_rsi(data, period)
     return rsi_value
+
+
+def create_dollar_bars(trade_data, dollar_threshold):
+    dollar_bars = []
+    temp_dollar = 0
+    open_price = trade_data['price'].iloc[0]
+    high_price = trade_data['price'].iloc[0]
+    low_price = trade_data['price'].iloc[0]
+    close_price = trade_data['price'].iloc[0]
+
+    for index, row in trade_data.iterrows():
+        trade_dollar = row['price'] * row['volume']
+        temp_dollar += trade_dollar
+        high_price = max(high_price, row['price'])
+        low_price = min(low_price, row['price'])
+        close_price = row['price']
+
+        if temp_dollar >= dollar_threshold:
+            dollar_bars.append({
+                'open': open_price,
+                'high': high_price,
+                'low': low_price,
+                'close': close_price,
+                'dollar_volume': temp_dollar,
+                'timestamp': row['timestamp']
+            })
+            temp_dollar = 0
+            open_price = row['price']
+            high_price = row['price']
+            low_price = row['price']
+
+    return pd.DataFrame(dollar_bars)
 
 
 def calculate_average_move(symbol):
@@ -271,6 +329,9 @@ def manage_positions(symbol, size):
     print('Short Term Activity : ', short_term_activity)
     calculate_average_move('XXBTZUSD')
 
+    dollar_bars_trade_data = fetch_trades()
+    print(create_dollar_bars(dollar_bars_trade_data, 50000))
+
     # Extract position details if there are open positions in the database
     if db_positions:
         (position_id, pos_symbol, open_timestamp, open_price,
@@ -365,7 +426,6 @@ async def kraken_websocket():
                     trades = data[1]
                     insert_trade(trades)
                     # print(f"Inserted trade data")
-
 
 # Function to check for trailing stop using fractals
 def check_trailing_stop(symbol):
