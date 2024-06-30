@@ -32,7 +32,7 @@ stored_signal = None
 position_ids = {}
 
 
-def fetch_recent_trades(symbol, minutes=60):
+def fetch_trades(symbol, minutes=60):
     conn = sqlite3.connect('trading_data.db')
     cursor = conn.cursor()
 
