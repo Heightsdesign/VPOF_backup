@@ -333,7 +333,7 @@ def manage_positions(symbol, size):
     calculate_average_move('XXBTZUSD')
 
     dollar_bars_trade_data = fetch_trades()
-    print(create_dollar_bars(dollar_bars_trade_data, 50000))
+    print(create_dollar_bars(dollar_bars_trade_data, 500000))
 
     # Extract position details if there are open positions in the database
     if db_positions:
