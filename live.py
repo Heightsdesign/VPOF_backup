@@ -214,7 +214,7 @@ def create_dollar_bars(trade_data, dollar_threshold):
 
 def calculate_average_move(symbol):
     dollar_bars_trade_data = fetch_trades()
-    dollar_bars = create_dollar_bars(dollar_bars_trade_data, 4000000)
+    dollar_bars = create_dollar_bars(dollar_bars_trade_data, 5000000)
     average_move = (dollar_bars['high'] - dollar_bars['low']).mean()
     return average_move / 2
 
@@ -282,6 +282,18 @@ def define_thresholds(pressure_data):
     return upper_threshold, lower_threshold
 
 
+def calculate_dollar_volume_since_open(position_open_time):
+
+    cursor.execute("""
+    SELECT SUM(price * volume) 
+    FROM trades 
+    WHERE timestamp >= ?
+    """, (position_open_time,))
+    dollar_volume = cursor.fetchone()[0]
+    conn.close()
+    return dollar_volume if dollar_volume is not None else 0
+
+
 def manage_positions(symbol, size):
     global stored_signal
 
@@ -309,8 +321,10 @@ def manage_positions(symbol, size):
     db_positions = fetch_open_position(symbol)
     # rsi_value = get_rsi('XXBTZUSD')
 
-    short_term_pressure = [signal[2] for signal in last_10_signals[:8]]
+    short_term_pressure = [signal[2] for signal in last_10_signals]
     long_term_pressure = [signal[4] for signal in daily_signals]
+
+    dollar_volume_since_open = None
 
     slope = calculate_slope_pressure(short_term_pressure)
     upper_threshold, lower_threshold = define_thresholds(long_term_pressure)
@@ -329,6 +343,9 @@ def manage_positions(symbol, size):
         (position_id, pos_symbol, open_timestamp, open_price,
          side, size, tp, sl, close_reason, close_price, close_time) = db_positions[-1]
 
+        # Calculate the dollar volume since the position was opened
+        dollar_volume_since_open = calculate_dollar_volume_since_open(open_timestamp)
+
     # Check for open positions via API
     if open_positions and 'openPositions' in open_positions and open_positions['openPositions']:
         print('Open positions from API:', open_positions['openPositions'])
@@ -346,10 +363,9 @@ def manage_positions(symbol, size):
                     place_order(order_auth, symbol, 'buy', position['size'])
                     close_position(position_id, 'stop_loss', current_price)
 
-                elif slope < 0:
-                    print('Closing short position short term reversal.')
+                elif dollar_volume_since_open >= 5000000:  # Threshold for the dollar-volume-based exit
                     place_order(order_auth, symbol, 'buy', position['size'])
-                    close_position(position_id, 'short_term_reversal', current_price)
+                    close_position(position_id, 'dollar_volume_exit', current_price)
 
             elif position['symbol'] == symbol and position['side'] == 'long':
                 print('Evaluating long position for symbol:', symbol)
@@ -364,10 +380,9 @@ def manage_positions(symbol, size):
                     place_order(order_auth, symbol, 'sell', position['size'])
                     close_position(position_id, 'stop_loss', current_price)
 
-                elif slope > 0:
-                    print('Closing long position due to short term reversal.')
-                    place_order(order_auth, symbol, 'sell', position['size'])
-                    close_position(position_id, 'short_term_reversal', current_price)
+                elif dollar_volume_since_open >= 5000000:  # Threshold for the dollar-volume-based exit
+                    place_order(order_auth, symbol, 'buy', position['size'])
+                    close_position(position_id, 'dollar_volume_exit', current_price)
 
     # Conditions to OPEN positions
     if not open_positions['openPositions']:

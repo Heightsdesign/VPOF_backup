@@ -6,8 +6,8 @@ import pandas as pd
 
 
 # Variables
-time_frame_minutes = 5  # Adjust this variable as needed
-look_back_period = 7  # Number of candles to look back
+time_frame_minutes = 30  # Adjust this variable as needed
+look_back_period = 10  # Number of candles to look back
 
 # Connect to the SQLite database
 conn = sqlite3.connect('trading_data.db')
