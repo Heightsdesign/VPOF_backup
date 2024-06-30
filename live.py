@@ -213,21 +213,10 @@ def create_dollar_bars(trade_data, dollar_threshold):
 
 
 def calculate_average_move(symbol):
-    # Fetch the 4-hour data for the symbol
-    df = fetch_last_n_candles(symbol, interval=30, num_candles=60)
-
-    # Ensure the data is in the correct format
-    df['time'] = pd.to_datetime(df['time'])
-    df.set_index('time', inplace=True)
-
-    # Calculate the move for each 4-hour candle
-    df['move'] = df['high'] - df['low']
-
-    # Calculate the average move
-    average_move = df['move'].mean()
-    print(average_move)
-
-    return average_move
+    dollar_bars_trade_data = fetch_trades()
+    dollar_bars = create_dollar_bars(dollar_bars_trade_data, 4000000)
+    average_move = (dollar_bars['high'] - dollar_bars['low']).mean()
+    return average_move / 2
 
 
 def get_stops(symbol, side, current_price):
@@ -333,7 +322,7 @@ def manage_positions(symbol, size):
     calculate_average_move('XXBTZUSD')
 
     dollar_bars_trade_data = fetch_trades()
-    print(create_dollar_bars(dollar_bars_trade_data, 4000000))
+    print(create_dollar_bars(dollar_bars_trade_data, 5000000))
 
     # Extract position details if there are open positions in the database
     if db_positions:
