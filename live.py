@@ -32,7 +32,9 @@ stored_signal = None
 position_ids = {}
 
 
-def fetch_trades(minutes=240):
+def fetch_recent_trades(symbol, minutes=60):
+    conn = sqlite3.connect('trading_data.db')
+    cursor = conn.cursor()
 
     # Calculate the timestamp for the starting point
     current_time = datetime.now()
@@ -45,7 +47,7 @@ def fetch_trades(minutes=240):
     FROM trades
     WHERE timestamp >= ?
     ORDER BY timestamp ASC
-    """, (start_timestamp))
+    """, (start_timestamp,))
 
     trades = cursor.fetchall()
 
@@ -55,6 +57,7 @@ def fetch_trades(minutes=240):
     # Convert timestamp to datetime
     trade_data['timestamp'] = pd.to_datetime(trade_data['timestamp'], unit='s')
 
+    conn.close()
     return trade_data
 
 
