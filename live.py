@@ -290,7 +290,6 @@ def calculate_dollar_volume_since_open(position_open_time):
     WHERE timestamp >= ?
     """, (position_open_time,))
     dollar_volume = cursor.fetchone()[0]
-    conn.close()
     return dollar_volume if dollar_volume is not None else 0
 
 
