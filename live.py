@@ -2,12 +2,12 @@ import asyncio
 import json
 import sqlite3
 import websockets
-from datetime import datetime, timezone, timedelta
+from datetime import datetime, timezone
 import pandas_ta as ta
-import pandas as pd
 import numpy as np
 import constants
 from sklearn.linear_model import LinearRegression
+from dollar_bars import fetch_trades, create_dollar_bars
 
 
 from order_flow_tools import calculate_order_flow_metrics
@@ -15,7 +15,7 @@ from order_flow_tools import calculate_order_flow_metrics
 from get_signals import (get_spikes, generate_final_signal, market_sentiment_eval,
                          fetch_last_10_signals, fetch_last_n_hours_signals, fetch_last_24_hours_signals)
 
-from kraken_toolbox import (get_open_positions, place_order, fetch_candles_since,
+from kraken_toolbox import (get_open_positions, place_order,
                             fetch_live_price, fetch_last_n_candles, KrakenFuturesAuth)
 
 
@@ -30,35 +30,6 @@ open_orders_auth = KrakenFuturesAuth(constants.kraken_public_key, constants.krak
 open_pos_auth = KrakenFuturesAuth(constants.kraken_public_key, constants.kraken_private_key, '/api/v3/openpositions')
 stored_signal = None
 position_ids = {}
-
-
-def fetch_trades(minutes=960):
-    conn = sqlite3.connect('trading_data.db')
-    cursor = conn.cursor()
-
-    # Calculate the timestamp for the starting point
-    current_time = datetime.now()
-    start_time = current_time - timedelta(minutes=minutes)
-    start_timestamp = int(start_time.timestamp())
-
-    # Fetch trades from the database
-    cursor.execute("""
-    SELECT timestamp, price, volume, side, type_order
-    FROM trades
-    WHERE timestamp >= ?
-    ORDER BY timestamp ASC
-    """, (start_timestamp,))
-
-    trades = cursor.fetchall()
-
-    # Convert to DataFrame
-    trade_data = pd.DataFrame(trades, columns=['timestamp', 'price', 'volume', 'side', 'type_order'])
-
-    # Convert timestamp to datetime
-    trade_data['timestamp'] = pd.to_datetime(trade_data['timestamp'], unit='s')
-
-    conn.close()
-    return trade_data
 
 
 # Function to insert trade data
@@ -169,51 +140,8 @@ def check_stochastic_setup(df):
         return None
 
 
-def calculate_rsi(df, period=14):
-    df['rsi'] = ta.rsi(df['close'], length=period)
-    return df['rsi'].iloc[-1]
-
-
-def get_rsi(symbol, period=14):
-    data = fetch_last_n_candles(symbol, num_candles=period+1)  # Fetch the required historical data
-    rsi_value = calculate_rsi(data, period)
-    return rsi_value
-
-
-def create_dollar_bars(trade_data, dollar_threshold):
-    dollar_bars = []
-    temp_dollar = 0
-    open_price = trade_data['price'].iloc[0]
-    high_price = trade_data['price'].iloc[0]
-    low_price = trade_data['price'].iloc[0]
-    close_price = trade_data['price'].iloc[0]
-
-    for index, row in trade_data.iterrows():
-        trade_dollar = row['price'] * row['volume']
-        temp_dollar += trade_dollar
-        high_price = max(high_price, row['price'])
-        low_price = min(low_price, row['price'])
-        close_price = row['price']
-
-        if temp_dollar >= dollar_threshold:
-            dollar_bars.append({
-                'open': open_price,
-                'high': high_price,
-                'low': low_price,
-                'close': close_price,
-                'dollar_volume': temp_dollar,
-                'timestamp': row['timestamp']
-            })
-            temp_dollar = 0
-            open_price = row['price']
-            high_price = row['price']
-            low_price = row['price']
-
-    return pd.DataFrame(dollar_bars)
-
-
 def calculate_average_move(symbol):
-    dollar_bars_trade_data = fetch_trades()
+    dollar_bars_trade_data = fetch_trades(24)
     dollar_bars = create_dollar_bars(dollar_bars_trade_data, 5000000)
     average_move = (dollar_bars['high'] - dollar_bars['low']).mean()
     return average_move / 2
@@ -232,34 +160,6 @@ def get_stops(symbol, side, current_price):
         stop_loss = current_price + average_move
 
     return take_profit, stop_loss
-
-
-def calculate_williams_fractals(df, period=7):
-    # Ensure that the high and low columns are numeric and replace non-numeric with NaN
-    df['high'] = pd.to_numeric(df['high'], errors='coerce')
-    df['low'] = pd.to_numeric(df['low'], errors='coerce')
-
-    # Ensure all values are numeric (convert NaN to a very small number)
-    df['high'] = df['high'].fillna(value=np.nan)
-    df['low'] = df['low'].fillna(value=np.nan)
-
-    # Calculate the Williams Fractals
-    def fractal_up(series):
-        center = len(series) // 2
-        if series[center] == max(series):
-            return series[center]
-        return np.nan
-
-    def fractal_down(series):
-        center = len(series) // 2
-        if series[center] == min(series):
-            return series[center]
-        return np.nan
-
-    df['fractal_up'] = df['high'].rolling(window=2 * period + 1, center=True).apply(fractal_up, raw=True)
-    df['fractal_down'] = df['low'].rolling(window=2 * period + 1, center=True).apply(fractal_down, raw=True)
-
-    return df
 
 
 def calculate_slope_pressure(pressure_data):
@@ -334,7 +234,7 @@ def manage_positions(symbol, size):
     print('Short Term Activity : ', short_term_activity)
     calculate_average_move('XXBTZUSD')
 
-    dollar_bars_trade_data = fetch_trades()
+    dollar_bars_trade_data = fetch_trades(24)
     print(create_dollar_bars(dollar_bars_trade_data, 5000000))
 
     # Extract position details if there are open positions in the database
@@ -432,34 +332,6 @@ async def kraken_websocket():
                     trades = data[1]
                     insert_trade(trades)
                     # print(f"Inserted trade data")
-
-# Function to check for trailing stop using fractals
-def check_trailing_stop(symbol):
-    db_positions = fetch_open_position(symbol)
-    if db_positions:
-        for position in db_positions:
-            position_id, open_price, side, size, open_timestamp = position
-            current_price = fetch_live_price(symbol)['last_price']
-
-            # Fetch historical data since the position was opened
-            historical_data = fetch_last_n_candles('XXBTZUSD', interval=5, num_candles=60)
-            fractals_data = calculate_williams_fractals(historical_data)
-
-            if side == 'long':
-                recent_down_fractals = fractals_data['fractal_down'].dropna()
-                if not recent_down_fractals.empty:
-                    trailing_stop_price = recent_down_fractals.iloc[-1]
-                    if current_price < trailing_stop_price:
-                        place_order(order_auth, symbol, 'sell', size)
-                        close_position(position_id, current_price)
-
-            elif side == 'short':
-                recent_up_fractals = fractals_data['fractal_up'].dropna()
-                if not recent_up_fractals.empty:
-                    trailing_stop_price = recent_up_fractals.iloc[-1]
-                    if current_price > trailing_stop_price:
-                        place_order(order_auth, symbol, 'buy', size)
-                        close_position(position_id, current_price)
 
 
 # Function to run the order flow analysis and store signals

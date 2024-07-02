@@ -24,6 +24,7 @@ CREATE TABLE IF NOT EXISTS volume_profile (
     volume REAL)
 """)
 
+
 cursor.execute("""
 CREATE TABLE IF NOT EXISTS signals (
     id INTEGER PRIMARY KEY AUTOINCREMENT,
