@@ -33,63 +33,7 @@ def create_tables():
 create_tables()
 
 
-# Function to calculate delta and track min/max deltas within a timeframe
-def calculate_delta_and_extremes(start_time, end_time, previous_cumulative_delta):
-    cursor.execute("""
-    SELECT total_delta, min_delta, max_delta, buy_volume, sell_volume
-    FROM deltas
-    WHERE start_time = ?
-    """, (start_time,))
-
-    row = cursor.fetchone()
-
-    if row:
-        total_delta, min_delta, max_delta, buy_volume, sell_volume = row
-    else:
-        cursor.execute("""
-        SELECT side, volume, type_order
-        FROM trades 
-        WHERE timestamp BETWEEN ? AND ?
-        """, (start_time, end_time))
-
-        trades = cursor.fetchall()
-        buy_volume = 0
-        sell_volume = 0
-        market_buy_volume = 0
-        market_sell_volume = 0
-        delta = 0
-        min_delta = float('inf')
-        max_delta = float('-inf')
-
-        for side, volume, type_order in trades:
-            if side == 'buy':
-                buy_volume += volume
-                delta += volume
-                if type_order == 'market':
-                    market_buy_volume += volume
-            elif side == 'sell':
-                sell_volume += volume
-                delta -= volume
-                if type_order == 'market':
-                    market_sell_volume += volume
-            min_delta = min(min_delta, delta)
-            max_delta = max(max_delta, delta)
-
-        total_delta = buy_volume - sell_volume
-
-        # Store the calculated values in the deltas table
-        cursor.execute("""
-        INSERT INTO deltas (start_time, end_time, total_delta, min_delta, max_delta, buy_volume, sell_volume)
-        VALUES (?, ?, ?, ?, ?, ?, ?)
-        """, (start_time, end_time, total_delta, min_delta, max_delta, buy_volume, sell_volume))
-        conn.commit()
-
-    cumulative_delta = previous_cumulative_delta + total_delta
-
-    return total_delta, min_delta, max_delta, cumulative_delta, buy_volume, sell_volume
-
-
-def calculate_order_flow_metrics(dollar_bars):
+def calculate_order_flow_metrics(dol_bars):
     delta_values = []
     cumulative_delta = 0
     min_delta_values = []
@@ -103,8 +47,8 @@ def calculate_order_flow_metrics(dollar_bars):
     aggressive_ratios = []
     aggressive_ratio = 0
 
-    for i in range(len(dollar_bars)):
-        bar = dollar_bars.iloc[i]
+    for i in range(len(dol_bars)):
+        bar = dol_bars.iloc[i]
         start_time = bar['timestamp']
         end_time = bar['timestamp']
 
@@ -168,7 +112,17 @@ def calculate_order_flow_metrics(dollar_bars):
     return (delta_values, cumulative_delta, min_delta_values,
             max_delta_values, market_buy_ratios, market_sell_ratios,
             buy_volumes, sell_volumes, aggressive_buy_activities,
-            aggressive_sell_activities, aggressive_ratios)
+            aggressive_sell_activities, aggressive_ratios, dol_bars.iloc[-1])
+
+
+def insert_latest_delta(latest_bar):
+    cursor.execute("""
+    INSERT INTO deltas (start_time, end_time, total_delta, min_delta, max_delta, buy_volume, sell_volume)
+    VALUES (?, ?, ?, ?, ?, ?, ?)
+    """, (latest_bar['timestamp'], latest_bar['timestamp'], latest_bar['total_delta'],
+          latest_bar['min_delta'], latest_bar['max_delta'], latest_bar['buy_volume'],
+          latest_bar['sell_volume']))
+    conn.commit()
 
 
 def calculate_slope(values):
@@ -181,14 +135,18 @@ def calculate_slope(values):
 
 
 # Fetch trades and create dollar bars
-trade_data = fetch_trades(hours=24)
-dollar_bars = create_dollar_bars(trade_data, dollar_threshold=5000000)
+trade_data = fetch_trades(hours=48)
+bars = create_dollar_bars(trade_data, dollar_threshold=2500000)
+
 
 # Calculate order flow metrics using dollar bars
 (delta_values, cumulative_delta, min_delta_values,
  max_delta_values, market_buy_ratios, market_sell_ratios,
  buy_volumes, sell_volumes, aggressive_buy_activities,
- aggressive_sell_activities, aggressive_ratios) = calculate_order_flow_metrics(dollar_bars)
+ aggressive_sell_activities, aggressive_ratios, latest_bar) = calculate_order_flow_metrics(bars)
+
+# Insert the latest delta values into the database
+insert_latest_delta(latest_bar)
 
 # Output metrics
 print(f"Delta Values: {delta_values}")

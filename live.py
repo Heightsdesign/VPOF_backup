@@ -142,7 +142,7 @@ def check_stochastic_setup(df):
 
 def calculate_average_move(symbol):
     dollar_bars_trade_data = fetch_trades(24)
-    dollar_bars = create_dollar_bars(dollar_bars_trade_data, 5000000)
+    dollar_bars = create_dollar_bars(dollar_bars_trade_data, 2500000)
     average_move = (dollar_bars['high'] - dollar_bars['low']).mean()
     return average_move / 2
 
@@ -235,7 +235,7 @@ def manage_positions(symbol, size):
     calculate_average_move('XXBTZUSD')
 
     dollar_bars_trade_data = fetch_trades(24)
-    print(create_dollar_bars(dollar_bars_trade_data, 5000000))
+    print(create_dollar_bars(dollar_bars_trade_data, 2500000))
 
     # Extract position details if there are open positions in the database
     if db_positions:
@@ -262,7 +262,7 @@ def manage_positions(symbol, size):
                     place_order(order_auth, symbol, 'buy', position['size'])
                     close_position(position_id, 'stop_loss', current_price)
 
-                elif dollar_volume_since_open >= 5000000:  # Threshold for the dollar-volume-based exit
+                elif dollar_volume_since_open >= 2500000:  # Threshold for the dollar-volume-based exit
                     place_order(order_auth, symbol, 'buy', position['size'])
                     close_position(position_id, 'dollar_volume_exit', current_price)
 
@@ -279,7 +279,7 @@ def manage_positions(symbol, size):
                     place_order(order_auth, symbol, 'sell', position['size'])
                     close_position(position_id, 'stop_loss', current_price)
 
-                elif dollar_volume_since_open >= 5000000:  # Threshold for the dollar-volume-based exit
+                elif dollar_volume_since_open >= 2500000:  # Threshold for the dollar-volume-based exit
                     place_order(order_auth, symbol, 'buy', position['size'])
                     close_position(position_id, 'dollar_volume_exit', current_price)
 
