@@ -109,6 +109,14 @@ def calculate_order_flow_metrics(dol_bars):
 
         aggressive_ratios.append(round(aggressive_ratio, 3))
 
+
+    latest_bar = dol_bars.iloc[-1]
+    latest_bar['total_delta'] = total_delta
+    latest_bar['min_delta'] = min_delta
+    latest_bar['max_delta'] = max_delta
+    latest_bar['buy_volume'] = buy_volume
+    latest_bar['sell_volume'] = sell_volume
+
     return (delta_values, cumulative_delta, min_delta_values,
             max_delta_values, market_buy_ratios, market_sell_ratios,
             buy_volumes, sell_volumes, aggressive_buy_activities,
