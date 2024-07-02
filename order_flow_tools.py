@@ -32,7 +32,6 @@ def create_tables():
 
 create_tables()
 
-
 def calculate_order_flow_metrics(dol_bars):
     delta_values = []
     cumulative_delta = 0
@@ -109,7 +108,6 @@ def calculate_order_flow_metrics(dol_bars):
 
         aggressive_ratios.append(round(aggressive_ratio, 3))
 
-
     latest_bar = dol_bars.iloc[-1]
     latest_bar['total_delta'] = total_delta
     latest_bar['min_delta'] = min_delta
@@ -120,18 +118,16 @@ def calculate_order_flow_metrics(dol_bars):
     return (delta_values, cumulative_delta, min_delta_values,
             max_delta_values, market_buy_ratios, market_sell_ratios,
             buy_volumes, sell_volumes, aggressive_buy_activities,
-            aggressive_sell_activities, aggressive_ratios, dol_bars.iloc[-1])
-
+            aggressive_sell_activities, aggressive_ratios, latest_bar)
 
 def insert_latest_delta(latest_bar):
     cursor.execute("""
     INSERT INTO deltas (start_time, end_time, total_delta, min_delta, max_delta, buy_volume, sell_volume)
     VALUES (?, ?, ?, ?, ?, ?, ?)
-    """, (latest_bar['timestamp'], latest_bar['timestamp'], latest_bar['total_delta'],
-          latest_bar['min_delta'], latest_bar['max_delta'], latest_bar['buy_volume'],
-          latest_bar['sell_volume']))
+    """, (int(latest_bar['timestamp'].timestamp()), int(latest_bar['timestamp'].timestamp()),
+          latest_bar['total_delta'], latest_bar['min_delta'], latest_bar['max_delta'],
+          latest_bar['buy_volume'], latest_bar['sell_volume']))
     conn.commit()
-
 
 def calculate_slope(values):
     x = np.arange(len(values)).reshape(-1, 1)
@@ -141,17 +137,15 @@ def calculate_slope(values):
     slope = model.coef_[0][0]
     return slope
 
-
 # Fetch trades and create dollar bars
-trade_data = fetch_trades(hours=48)
-bars = create_dollar_bars(trade_data, dollar_threshold=2500000)
-
+trade_data = fetch_trades(hours=24)
+dollar_bars = create_dollar_bars(trade_data, dollar_threshold=4000000)
 
 # Calculate order flow metrics using dollar bars
 (delta_values, cumulative_delta, min_delta_values,
  max_delta_values, market_buy_ratios, market_sell_ratios,
  buy_volumes, sell_volumes, aggressive_buy_activities,
- aggressive_sell_activities, aggressive_ratios, latest_bar) = calculate_order_flow_metrics(bars)
+ aggressive_sell_activities, aggressive_ratios, latest_bar) = calculate_order_flow_metrics(dollar_bars)
 
 # Insert the latest delta values into the database
 insert_latest_delta(latest_bar)
