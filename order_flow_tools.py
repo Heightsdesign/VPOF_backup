@@ -53,10 +53,10 @@ def calculate_order_flow_metrics(dol_bars):
         end_time = bar['timestamp']
 
         cursor.execute("""
-        SELECT side, volume, type_order
-        FROM trades
-        WHERE timestamp BETWEEN ? AND ?
-        """, (start_time, end_time))
+            SELECT side, volume, type_order
+            FROM trades
+            WHERE timestamp BETWEEN ? AND ?
+            """, (int(start_time.timestamp()), int(end_time.timestamp())))
 
         trades = cursor.fetchall()
         buy_volume = 0

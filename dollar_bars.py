@@ -8,13 +8,11 @@ conn = sqlite3.connect('trading_data.db')
 cursor = conn.cursor()
 
 
-def fetch_trades(hours):
-    # Calculate the timestamp for the starting point
+def fetch_trades(hours=48):
     current_time = datetime.now()
     start_time = current_time - timedelta(hours=hours)
     start_timestamp = int(start_time.timestamp())
 
-    # Fetch trades from the database
     cursor.execute("""
     SELECT timestamp, price, volume, side, type_order
     FROM trades
@@ -24,10 +22,7 @@ def fetch_trades(hours):
 
     trades = cursor.fetchall()
 
-    # Convert to DataFrame
     trade_data = pd.DataFrame(trades, columns=['timestamp', 'price', 'volume', 'side', 'type_order'])
-
-    # Convert timestamp to datetime
     trade_data['timestamp'] = pd.to_datetime(trade_data['timestamp'], unit='s')
 
     return trade_data
