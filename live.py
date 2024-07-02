@@ -336,11 +336,17 @@ async def kraken_websocket():
 
 # Function to run the order flow analysis and store signals
 def run_analysis_and_store_signals():
+
+    # Fetch trades and create dollar bars
+    trade_data = fetch_trades(hours=48)
+    bars = create_dollar_bars(trade_data, dollar_threshold=5000000)
+
+
     # Your analysis logic
     (delta_values, cumulative_delta, min_delta_values,
      max_delta_values, market_buy_ratios, market_sell_ratios,
      buy_volumes, sell_volumes, aggressive_buy_activities,
-     aggressive_sell_activities, aggressive_ratios) = calculate_order_flow_metrics()
+     aggressive_sell_activities, aggressive_ratios) = calculate_order_flow_metrics(bars)
 
     aggressive_ratio_signals = get_spikes(aggressive_ratios)
     delta_value_signals = get_spikes(delta_values)
