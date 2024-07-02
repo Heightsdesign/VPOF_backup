@@ -120,6 +120,7 @@ def calculate_order_flow_metrics(dol_bars):
             buy_volumes, sell_volumes, aggressive_buy_activities,
             aggressive_sell_activities, aggressive_ratios, latest_bar)
 
+
 def insert_latest_delta(latest_bar):
     # Check if the entry already exists in the database
     cursor.execute("""
@@ -133,6 +134,7 @@ def insert_latest_delta(latest_bar):
               latest_bar['total_delta'], latest_bar['min_delta'], latest_bar['max_delta'],
               latest_bar['buy_volume'], latest_bar['sell_volume']))
         conn.commit()
+
 
 def calculate_slope(values):
     x = np.arange(len(values)).reshape(-1, 1)

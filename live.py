@@ -7,14 +7,11 @@ import pandas_ta as ta
 import numpy as np
 import constants
 from sklearn.linear_model import LinearRegression
+
 from dollar_bars import fetch_trades, create_dollar_bars
-
-
-from order_flow_tools import calculate_order_flow_metrics
-
+from order_flow_tools import calculate_order_flow_metrics, insert_latest_delta
 from get_signals import (get_spikes, generate_final_signal, market_sentiment_eval,
                          fetch_last_10_signals, fetch_last_n_hours_signals, fetch_last_24_hours_signals)
-
 from kraken_toolbox import (get_open_positions, place_order,
                             fetch_live_price, fetch_last_n_candles, KrakenFuturesAuth)
 
@@ -333,20 +330,16 @@ async def kraken_websocket():
                     insert_trade(trades)
                     # print(f"Inserted trade data")
 
-
-# Function to run the order flow analysis and store signals
 def run_analysis_and_store_signals():
-
     # Fetch trades and create dollar bars
     trade_data = fetch_trades(hours=48)
     bars = create_dollar_bars(trade_data, dollar_threshold=5000000)
-
 
     # Your analysis logic
     (delta_values, cumulative_delta, min_delta_values,
      max_delta_values, market_buy_ratios, market_sell_ratios,
      buy_volumes, sell_volumes, aggressive_buy_activities,
-     aggressive_sell_activities, aggressive_ratios) = calculate_order_flow_metrics(bars)
+     aggressive_sell_activities, aggressive_ratios, latest_bar) = calculate_order_flow_metrics(bars)
 
     aggressive_ratio_signals = get_spikes(aggressive_ratios)
     delta_value_signals = get_spikes(delta_values)
@@ -365,6 +358,9 @@ def run_analysis_and_store_signals():
     # Insert the signal into the database
     timestamp = int(datetime.now(timezone.utc).timestamp())
     insert_signal(timestamp, final_signal[0], final_signal[1], market_pressure, volume_profile_signal, price_action_signal)
+
+    # Insert the latest delta values into the database
+    insert_latest_delta(latest_bar)
 
     # Manage positions based on the signals
     manage_positions('PF_XBTUSD', 0.002)
