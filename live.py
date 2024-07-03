@@ -197,10 +197,8 @@ def manage_positions(symbol, size):
 
     # Market sentiment
     sentiment_signals = fetch_last_n_hours_signals(1)
-    market_sentiment = market_sentiment_eval(sentiment_signals)[1]
+    # market_sentiment = market_sentiment_eval(sentiment_signals)[1]
 
-    # Daily signals
-    daily_signals = fetch_last_24_hours_signals()
 
     # Check stochastic setup
     df = fetch_last_n_candles('XXBTZUSD', num_candles=60)
@@ -216,19 +214,16 @@ def manage_positions(symbol, size):
     # rsi_value = get_rsi('XXBTZUSD')
 
     short_term_pressure = [signal[2] for signal in last_10_signals]
-    long_term_pressure = [signal[4] for signal in daily_signals]
 
     dollar_volume_since_open = None
 
     slope = calculate_slope_pressure(short_term_pressure)
-    upper_threshold, lower_threshold = define_thresholds(long_term_pressure)
     print('Pressure Slope : ', slope)
     print('Open positions from DB:', db_positions)
     # print('RSI:', rsi_value)
     print('Stochastic Setup : ', stoch_setup)
     print('Short Term Activity : ', short_term_activity)
     calculate_average_move('XXBTZUSD')
-
 
     # Extract position details if there are open positions in the database
     if db_positions:
@@ -355,6 +350,8 @@ def run_analysis_and_store_signals():
 
     # Insert the latest delta values into the database
     insert_latest_delta(latest_bar)
+    print(dollar_bars)
+    print(latest_bar)
 
     # Manage positions based on the signals
     manage_positions('PF_XBTUSD', 0.002)
