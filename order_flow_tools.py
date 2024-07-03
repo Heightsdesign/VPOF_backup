@@ -58,6 +58,12 @@ def calculate_order_flow_metrics(dol_bars):
             """, (int(start_time.timestamp()), int(end_time.timestamp())))
 
         trades = cursor.fetchall()
+
+        # Debug: Print trades fetched for each bar
+        print(f"Trades for bar {i} from {start_time} to {end_time}:")
+        for trade in trades:
+            print(trade)
+
         buy_volume = 0
         sell_volume = 0
         market_buy_volume = 0
@@ -79,6 +85,10 @@ def calculate_order_flow_metrics(dol_bars):
                     market_sell_volume += volume
             min_delta = min(min_delta, delta)
             max_delta = max(max_delta, delta)
+
+        # Debug: Print calculated values for each bar
+        print(f"Bar {i} values:")
+        print(f"Buy Volume: {buy_volume}, Sell Volume: {sell_volume}, Delta: {delta}, Min Delta: {min_delta}, Max Delta: {max_delta}")
 
         total_delta = buy_volume - sell_volume
 
@@ -108,14 +118,16 @@ def calculate_order_flow_metrics(dol_bars):
 
         aggressive_ratios.append(round(aggressive_ratio, 3))
 
-        print(f"Bar {i}: Total Delta={total_delta}, Min Delta={min_delta}, Max Delta={max_delta}, Buy Volume={buy_volume}, Sell Volume={sell_volume}")
-
     latest_bar = dol_bars.iloc[-1].copy()  # Create a copy to avoid SettingWithCopyWarning
     latest_bar['total_delta'] = total_delta
     latest_bar['min_delta'] = min_delta
     latest_bar['max_delta'] = max_delta
     latest_bar['buy_volume'] = buy_volume
     latest_bar['sell_volume'] = sell_volume
+
+    # Debug: Print final latest bar values
+    print("Latest bar values:")
+    print(latest_bar)
 
     return (delta_values, cumulative_delta, min_delta_values,
             max_delta_values, market_buy_ratios, market_sell_ratios,
