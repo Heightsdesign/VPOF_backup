@@ -291,9 +291,6 @@ def print_positions(positions):
 
 """__________________________________________________________________________________________________________________"""
 
-# Example usage with your data
-# aggressive_buy_activities = [0.011, 0.001, 0.008, 0.076, 0.096, 0.33, 0.168, 0.005, 0.004, 0.0, 0.001, 0.102]
-# aggressive_sell_activities = [70.004, 50.0, 0.003, 0.007, 0.005, 0.002, 1.425, 0.007, 0.003, 0.0, 0.012, 0.0]
 
 # Generate the signals
 aggressive_ratio_signals = get_spikes(aggressive_ratios)

@@ -8,7 +8,7 @@ conn = sqlite3.connect('trading_data.db')
 cursor = conn.cursor()
 
 
-def fetch_trades(hours=48):
+def fetch_trades(hours=4):
     # Calculate the timestamp for the starting point
     current_time = datetime.now()
     start_time = current_time - timedelta(hours=hours)
@@ -33,6 +33,7 @@ def fetch_trades(hours=48):
     print(trade_data.head())  # Print first few rows of trade data for verification
 
     return trade_data
+
 
 def create_dollar_bars(trade_data, dollar_threshold):
     dollar_bars = []

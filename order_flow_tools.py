@@ -81,8 +81,8 @@ def calculate_order_flow_metrics(dol_bars):
             max_delta = max(max_delta, delta)
 
         # Debug: Print calculated values for each bar
-        print(f"Bar {i} values:")
-        print(f"Buy Volume: {buy_volume}, Sell Volume: {sell_volume}, Delta: {delta}, Min Delta: {min_delta}, Max Delta: {max_delta}")
+        # print(f"Bar {i} values:")
+        # print(f"Buy Volume: {buy_volume}, Sell Volume: {sell_volume}, Delta: {delta}, Min Delta: {min_delta}, Max Delta: {max_delta}")
 
         total_delta = buy_volume - sell_volume
 
