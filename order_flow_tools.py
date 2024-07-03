@@ -29,7 +29,6 @@ def create_tables():
     """)
     conn.commit()
 
-
 create_tables()
 def calculate_order_flow_metrics(dol_bars):
     delta_values = []
@@ -119,10 +118,6 @@ def calculate_order_flow_metrics(dol_bars):
     latest_bar['buy_volume'] = buy_volume
     latest_bar['sell_volume'] = sell_volume
 
-    # Debug: Print final latest bar values
-    print("Latest bar values:")
-    print(latest_bar)
-
     return (delta_values, cumulative_delta, min_delta_values,
             max_delta_values, market_buy_ratios, market_sell_ratios,
             buy_volumes, sell_volumes, aggressive_buy_activities,
@@ -162,7 +157,13 @@ def calculate_slope(values):
 # Insert the latest delta values into the database
 # insert_latest_delta(latest_bar)
 
+
 # Output metrics
+
+print("Latest bar values:")
+print(latest_bar)
+print('\n')
+
 print(f"Delta Values: {delta_values}")
 print(f"Cumulative Delta: {cumulative_delta}")
 print(f"Min Delta Values: {min_delta_values}")
