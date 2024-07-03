@@ -3,7 +3,7 @@ from datetime import timedelta
 import numpy as np
 from sklearn.linear_model import LinearRegression
 
-from dollar_bars import fetch_trades, create_dollar_bars
+from dollar_bars import dollar_bars
 
 # Variables
 time_frame_minutes = 5  # Adjust this variable as needed
@@ -31,6 +31,7 @@ def create_tables():
 
 
 create_tables()
+
 
 def calculate_order_flow_metrics(dol_bars):
     delta_values = []
@@ -144,9 +145,6 @@ def calculate_slope(values):
     slope = model.coef_[0][0]
     return slope
 
-# Fetch trades and create dollar bars
-trade_data = fetch_trades(hours=24)
-dollar_bars = create_dollar_bars(trade_data, dollar_threshold=4000000)
 
 # Calculate order flow metrics using dollar bars
 (delta_values, cumulative_delta, min_delta_values,

@@ -8,7 +8,7 @@ import numpy as np
 import constants
 from sklearn.linear_model import LinearRegression
 
-from dollar_bars import fetch_trades, create_dollar_bars
+from dollar_bars import dollar_bars
 from order_flow_tools import calculate_order_flow_metrics, insert_latest_delta
 from get_signals import (get_spikes, generate_final_signal, market_sentiment_eval,
                          fetch_last_10_signals, fetch_last_n_hours_signals, fetch_last_24_hours_signals)
@@ -138,8 +138,6 @@ def check_stochastic_setup(df):
 
 
 def calculate_average_move(symbol):
-    dollar_bars_trade_data = fetch_trades(24)
-    dollar_bars = create_dollar_bars(dollar_bars_trade_data, 2500000)
     average_move = (dollar_bars['high'] - dollar_bars['low']).mean()
     return average_move / 2
 
@@ -231,8 +229,6 @@ def manage_positions(symbol, size):
     print('Short Term Activity : ', short_term_activity)
     calculate_average_move('XXBTZUSD')
 
-    dollar_bars_trade_data = fetch_trades(24)
-    print(create_dollar_bars(dollar_bars_trade_data, 2500000))
 
     # Extract position details if there are open positions in the database
     if db_positions:
@@ -330,16 +326,14 @@ async def kraken_websocket():
                     insert_trade(trades)
                     # print(f"Inserted trade data")
 
+
 def run_analysis_and_store_signals():
-    # Fetch trades and create dollar bars
-    trade_data = fetch_trades(hours=48)
-    bars = create_dollar_bars(trade_data, dollar_threshold=5000000)
 
     # Your analysis logic
     (delta_values, cumulative_delta, min_delta_values,
      max_delta_values, market_buy_ratios, market_sell_ratios,
      buy_volumes, sell_volumes, aggressive_buy_activities,
-     aggressive_sell_activities, aggressive_ratios, latest_bar) = calculate_order_flow_metrics(bars)
+     aggressive_sell_activities, aggressive_ratios, latest_bar) = calculate_order_flow_metrics(dollar_bars)
 
     aggressive_ratio_signals = get_spikes(aggressive_ratios)
     delta_value_signals = get_spikes(delta_values)

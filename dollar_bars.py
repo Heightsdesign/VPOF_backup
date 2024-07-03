@@ -58,3 +58,11 @@ def create_dollar_bars(trade_data, dollar_threshold):
             low_price = row['price']
 
     return pd.DataFrame(dollar_bars)
+
+
+"""__________________________________________________________________________________________________________________"""
+
+
+# Fetch trades and create dollar bars
+trade_data = fetch_trades(hours=48)
+dollar_bars = create_dollar_bars(trade_data, dollar_threshold=2500000)
