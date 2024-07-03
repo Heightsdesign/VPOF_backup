@@ -58,11 +58,6 @@ def calculate_order_flow_metrics(dol_bars):
 
         trades = cursor.fetchall()
 
-        # Debug: Print trades fetched for each bar
-        print(f"Trades for bar {i} from {start_time} to {end_time}:")
-        for trade in trades:
-            print(trade)
-
         buy_volume = 0
         sell_volume = 0
         market_buy_volume = 0
