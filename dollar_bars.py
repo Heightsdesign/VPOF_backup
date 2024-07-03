@@ -9,10 +9,12 @@ cursor = conn.cursor()
 
 
 def fetch_trades(hours=48):
+    # Calculate the timestamp for the starting point
     current_time = datetime.now()
     start_time = current_time - timedelta(hours=hours)
     start_timestamp = int(start_time.timestamp())
 
+    # Fetch trades from the database
     cursor.execute("""
     SELECT timestamp, price, volume, side, type_order
     FROM trades
@@ -22,8 +24,13 @@ def fetch_trades(hours=48):
 
     trades = cursor.fetchall()
 
+    # Convert to DataFrame
     trade_data = pd.DataFrame(trades, columns=['timestamp', 'price', 'volume', 'side', 'type_order'])
+
+    # Convert timestamp to datetime
     trade_data['timestamp'] = pd.to_datetime(trade_data['timestamp'], unit='s')
+
+    print(trade_data.head())  # Print first few rows of trade data for verification
 
     return trade_data
 
@@ -57,7 +64,10 @@ def create_dollar_bars(trade_data, dollar_threshold):
             high_price = row['price']
             low_price = row['price']
 
-    return pd.DataFrame(dollar_bars)
+    dollar_bars_df = pd.DataFrame(dollar_bars)
+    print(dollar_bars_df.head())  # Print first few rows of dollar bars for verification
+
+    return dollar_bars_df
 
 
 """__________________________________________________________________________________________________________________"""

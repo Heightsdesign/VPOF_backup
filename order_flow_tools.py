@@ -32,7 +32,6 @@ def create_tables():
 
 create_tables()
 
-
 def calculate_order_flow_metrics(dol_bars):
     delta_values = []
     cumulative_delta = 0
@@ -108,6 +107,8 @@ def calculate_order_flow_metrics(dol_bars):
             aggressive_ratio = (aggressive_sell_activity / aggressive_buy_activity) * -1
 
         aggressive_ratios.append(round(aggressive_ratio, 3))
+
+        print(f"Bar {i}: Total Delta={total_delta}, Min Delta={min_delta}, Max Delta={max_delta}, Buy Volume={buy_volume}, Sell Volume={sell_volume}")
 
     latest_bar = dol_bars.iloc[-1].copy()  # Create a copy to avoid SettingWithCopyWarning
     latest_bar['total_delta'] = total_delta
