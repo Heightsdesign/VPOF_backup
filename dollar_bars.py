@@ -34,7 +34,6 @@ def fetch_trades(hours=48):
 
     return trade_data
 
-
 def create_dollar_bars(trade_data, dollar_threshold):
     dollar_bars = []
     temp_dollar = 0
@@ -42,6 +41,7 @@ def create_dollar_bars(trade_data, dollar_threshold):
     high_price = trade_data['price'].iloc[0]
     low_price = trade_data['price'].iloc[0]
     close_price = trade_data['price'].iloc[0]
+    start_time = trade_data['timestamp'].iloc[0]
 
     for index, row in trade_data.iterrows():
         trade_dollar = row['price'] * row['volume']
@@ -49,6 +49,7 @@ def create_dollar_bars(trade_data, dollar_threshold):
         high_price = max(high_price, row['price'])
         low_price = min(low_price, row['price'])
         close_price = row['price']
+        end_time = row['timestamp']
 
         if temp_dollar >= dollar_threshold:
             dollar_bars.append({
@@ -57,17 +58,16 @@ def create_dollar_bars(trade_data, dollar_threshold):
                 'low': low_price,
                 'close': close_price,
                 'dollar_volume': temp_dollar,
-                'timestamp': row['timestamp']
+                'start_time': start_time,
+                'end_time': end_time
             })
             temp_dollar = 0
             open_price = row['price']
             high_price = row['price']
             low_price = row['price']
+            start_time = end_time
 
-    dollar_bars_df = pd.DataFrame(dollar_bars)
-    print(dollar_bars_df.head())  # Print first few rows of dollar bars for verification
-
-    return dollar_bars_df
+    return pd.DataFrame(dollar_bars)
 
 
 """__________________________________________________________________________________________________________________"""

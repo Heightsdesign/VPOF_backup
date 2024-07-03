@@ -31,7 +31,6 @@ def create_tables():
 
 
 create_tables()
-
 def calculate_order_flow_metrics(dol_bars):
     delta_values = []
     cumulative_delta = 0
@@ -48,8 +47,8 @@ def calculate_order_flow_metrics(dol_bars):
 
     for i in range(len(dol_bars)):
         bar = dol_bars.iloc[i]
-        start_time = bar['timestamp']
-        end_time = bar['timestamp']
+        start_time = bar['start_time']
+        end_time = bar['end_time']
 
         cursor.execute("""
             SELECT side, volume, type_order
