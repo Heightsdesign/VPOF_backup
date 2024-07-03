@@ -165,7 +165,7 @@ def calculate_slope(values):
  aggressive_sell_activities, aggressive_ratios, latest_bar) = calculate_order_flow_metrics(dollar_bars)
 
 # Insert the latest delta values into the database
-insert_latest_delta(latest_bar)
+# insert_latest_delta(latest_bar)
 
 # Output metrics
 print(f"Delta Values: {delta_values}")
