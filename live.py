@@ -371,8 +371,8 @@ def run_analysis_and_store_signals():
     insert_signal(timestamp, final_signal[0], final_signal[1], market_pressure, volume_profile_signal, price_action_signal)
 
     # Insert the latest delta values into the database
-    insert_latest_delta(latest_bar)
-    print(f"Latest bar inserted: {latest_bar}")
+    # insert_latest_delta(latest_bar)
+    # print(f"Latest bar inserted: {latest_bar}")
 
     # Manage positions based on the signals
     manage_positions('PF_XBTUSD', 0.002)
