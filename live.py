@@ -275,13 +275,13 @@ def manage_positions(symbol, size):
     if not open_positions['openPositions']:
         print('No open positions found.')
 
-        if stoch_setup == 'buy' and slope < 0:
+        if stoch_setup == 'buy' and slope < 10:
             print('Placing new buy order.')
             place_order(order_auth, symbol, 'buy', size)
             take_profit, stop_loss = get_stops('XXBTZUSD', 'buy', current_price)
             insert_position(symbol, current_price, 'long', size, take_profit, stop_loss)
 
-        elif stoch_setup == 'sell' and slope > 0:
+        elif stoch_setup == 'sell' and slope > 10:
             print('Placing new sell order.')
             place_order(order_auth, symbol, 'sell', size)
             take_profit, stop_loss = get_stops('XXBTZUSD', 'sell', current_price)
