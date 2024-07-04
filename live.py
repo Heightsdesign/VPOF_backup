@@ -11,7 +11,7 @@ from sklearn.linear_model import LinearRegression
 from dollar_bars import dollar_bars
 from order_flow_tools import calculate_order_flow_metrics, insert_latest_delta
 from get_signals import (get_spikes, generate_final_signal, market_sentiment_eval,
-                         fetch_last_10_signals, fetch_last_n_hours_signals, fetch_last_24_hours_signals)
+                         fetch_last_10_signals, fetch_last_n_hours_signals)
 from kraken_toolbox import (get_open_positions, place_order,
                             fetch_live_price, fetch_last_n_candles, KrakenFuturesAuth)
 
@@ -138,6 +138,7 @@ def check_stochastic_setup(df):
 
 
 def calculate_average_move(symbol):
+
     average_move = (dollar_bars['high'] - dollar_bars['low']).mean()
     return average_move / 2
 
