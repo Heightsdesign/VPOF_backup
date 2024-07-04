@@ -32,6 +32,13 @@ def create_tables():
 
 create_tables()
 def calculate_order_flow_metrics(dol_bars):
+
+
+    if dol_bars.empty:
+        print("No dollar bars available.")
+        return [], 0, [], [], [], [], [], [], [], [], [], None
+
+
     delta_values = []
     cumulative_delta = 0
     min_delta_values = []
