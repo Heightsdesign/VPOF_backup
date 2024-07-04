@@ -148,9 +148,10 @@ def calculate_average_move(dollar_bars):
 
 
 def get_stops(dollar_bars, side, current_price):
-    average_move = calculate_average_move(dollar_bars)
+
     take_profit = None
     stop_loss = None
+    average_move = calculate_average_move(dollar_bars)
 
     if side == 'buy':
         take_profit = current_price + average_move
@@ -273,13 +274,13 @@ def manage_positions(symbol, size, dollar_bars):
         if stoch_setup == 'buy' and slope > 10:
             print('Placing new buy order.')
             place_order(order_auth, symbol, 'buy', size)
-            take_profit, stop_loss = get_stops('XXBTZUSD', 'buy', current_price)
+            take_profit, stop_loss = get_stops(dollar_bars, 'buy', current_price)
             insert_position(symbol, current_price, 'long', size, take_profit, stop_loss)
 
         elif stoch_setup == 'sell' and slope < -10:
             print('Placing new sell order.')
             place_order(order_auth, symbol, 'sell', size)
-            take_profit, stop_loss = get_stops('XXBTZUSD', 'sell', current_price)
+            take_profit, stop_loss = get_stops(dollar_bars, 'sell', current_price)
             insert_position(symbol, current_price, 'short', size, take_profit, stop_loss)
 
 
