@@ -264,7 +264,7 @@ def manage_positions(symbol, size, dollar_bars):
                     close_position(position_id, 'stop_loss', current_price)
 
                 elif dollar_volume_since_open >= 12500000:  # Threshold for the dollar-volume-based exit
-                    place_order(order_auth, symbol, 'buy', position['size'])
+                    place_order(order_auth, symbol, 'sell', position['size'])
                     close_position(position_id, 'dollar_volume_exit', current_price)
 
     # Conditions to OPEN positions
