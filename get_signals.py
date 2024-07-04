@@ -314,6 +314,7 @@ fetch_last_sell_signal()
 
 # Fetch last n hours signals
 print(fetch_last_n_hours_signals(8))
+print('\n')
 
 # Fetch last ten signals
 # print(fetch_last_10_signals())
