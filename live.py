@@ -138,6 +138,10 @@ def check_stochastic_setup(df):
 
 
 def calculate_average_move(symbol):
+    # Check if dollar_bars DataFrame is empty
+    if dollar_bars.empty:
+        print("No dollar bars available.")
+        return None
 
     average_move = (dollar_bars['high'] - dollar_bars['low']).mean()
     return average_move / 2
@@ -325,11 +329,20 @@ async def kraken_websocket():
 
 def run_analysis_and_store_signals():
 
+    # Check if dollar_bars DataFrame is valid
+    if dollar_bars.empty:
+        print("No dollar bars available for analysis.")
+        return
+
+    print("Dollar bars created successfully")
+
     # Your analysis logic
     (delta_values, cumulative_delta, min_delta_values,
      max_delta_values, market_buy_ratios, market_sell_ratios,
      buy_volumes, sell_volumes, aggressive_buy_activities,
      aggressive_sell_activities, aggressive_ratios, latest_bar) = calculate_order_flow_metrics(dollar_bars)
+
+    print("Order flow metrics calculated")
 
     aggressive_ratio_signals = get_spikes(aggressive_ratios)
     delta_value_signals = get_spikes(delta_values)
@@ -337,9 +350,13 @@ def run_analysis_and_store_signals():
     # Calculate final signal
     final_signal = generate_final_signal(aggressive_ratio_signals, delta_value_signals, cumulative_delta, threshold=9)
 
+    print(f"Final signal calculated: {final_signal}")
+
     # Market sentiment
     sentiment_signals = fetch_last_n_hours_signals(1)
     market_pressure = market_sentiment_eval(sentiment_signals)[0]
+
+    print(f"Market pressure calculated: {market_pressure}")
 
     # Assuming 'volume_profile_signal' and 'price_action_signal' are obtained from other analyses
     volume_profile_signal = "N/A"  # Placeholder
@@ -350,9 +367,8 @@ def run_analysis_and_store_signals():
     insert_signal(timestamp, final_signal[0], final_signal[1], market_pressure, volume_profile_signal, price_action_signal)
 
     # Insert the latest delta values into the database
-    # insert_latest_delta(latest_bar)
-    print(dollar_bars)
-    print(latest_bar)
+    insert_latest_delta(latest_bar)
+    print(f"Latest bar inserted: {latest_bar}")
 
     # Manage positions based on the signals
     manage_positions('PF_XBTUSD', 0.002)
