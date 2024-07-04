@@ -310,10 +310,10 @@ fetch_last_buy_signal()
 fetch_last_sell_signal()
 
 # Fetch and display today's signals
-fetch_last_24_hours_signals()
+# fetch_last_24_hours_signals()
 
-# Fetch last 4 hours signals
-# print(fetch_last_4_hours_signals())
+# Fetch last n hours signals
+print(fetch_last_n_hours_signals(8))
 
 # Fetch last ten signals
 # print(fetch_last_10_signals())

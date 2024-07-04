@@ -31,8 +31,9 @@ def create_tables():
 
 
 create_tables()
-def calculate_order_flow_metrics(dol_bars):
 
+
+def calculate_order_flow_metrics(dol_bars):
 
     if dol_bars.empty:
         print("No dollar bars available.")
@@ -159,6 +160,8 @@ def calculate_slope(values):
         return 0
 
 
+"""__________________________________________________________________________________________________________________"""
+
 # Calculate order flow metrics using dollar bars
 (delta_values, cumulative_delta, min_delta_values,
  max_delta_values, market_buy_ratios, market_sell_ratios,
@@ -167,7 +170,6 @@ def calculate_slope(values):
 
 # Insert the latest delta values into the database
 # insert_latest_delta(latest_bar)
-
 
 # Output metrics
 

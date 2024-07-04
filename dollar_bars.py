@@ -78,7 +78,6 @@ def create_dollar_bars(trade_data, dollar_threshold):
 
 """__________________________________________________________________________________________________________________"""
 
-
 # Fetch trades and create dollar bars
 trade_data = fetch_trades(hours=7)
 dollar_bars = create_dollar_bars(trade_data, dollar_threshold=2500000)

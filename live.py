@@ -8,7 +8,7 @@ import numpy as np
 import constants
 from sklearn.linear_model import LinearRegression
 
-from dollar_bars import dollar_bars
+from dollar_bars import fetch_trades, create_dollar_bars
 from order_flow_tools import calculate_order_flow_metrics, insert_latest_delta
 from get_signals import (get_spikes, generate_final_signal, market_sentiment_eval,
                          fetch_last_10_signals, fetch_last_n_hours_signals)
@@ -328,6 +328,10 @@ async def kraken_websocket():
 
 
 def run_analysis_and_store_signals():
+
+    # Fetch trades and create dollar bars
+    trade_data = fetch_trades(hours=7)
+    dollar_bars = create_dollar_bars(trade_data, dollar_threshold=2500000)
 
     # Check if dollar_bars DataFrame is valid
     if dollar_bars.empty:
