@@ -137,7 +137,7 @@ def check_stochastic_setup(df):
         return None
 
 
-def calculate_average_move(symbol):
+def calculate_average_move(dollar_bars):
     # Check if dollar_bars DataFrame is empty
     if dollar_bars.empty:
         print("No dollar bars available.")
@@ -193,7 +193,7 @@ def calculate_dollar_volume_since_open(position_open_time):
     return dollar_volume if dollar_volume is not None else 0
 
 
-def manage_positions(symbol, size):
+def manage_positions(symbol, size, dollar_bars):
     global stored_signal
 
     # Fetch recent signals and check for consecutive signals
@@ -228,7 +228,7 @@ def manage_positions(symbol, size):
     # print('RSI:', rsi_value)
     print('Stochastic Setup : ', stoch_setup)
     print('Short Term Activity : ', short_term_activity)
-    calculate_average_move('XXBTZUSD')
+    calculate_average_move(dollar_bars)
 
     # Extract position details if there are open positions in the database
     if db_positions:
@@ -375,7 +375,7 @@ def run_analysis_and_store_signals():
     # print(f"Latest bar inserted: {latest_bar}")
 
     # Manage positions based on the signals
-    manage_positions('PF_XBTUSD', 0.002)
+    manage_positions('PF_XBTUSD', 0.002, dollar_bars)
     # check_trailing_stop('PF_XBTUSD')
 
 
