@@ -148,12 +148,15 @@ def insert_latest_delta(latest_bar):
 
 
 def calculate_slope(values):
-    x = np.arange(len(values)).reshape(-1, 1)
-    y = np.array(values).reshape(-1, 1)
-    model = LinearRegression()
-    model.fit(x, y)
-    slope = model.coef_[0][0]
-    return slope
+    if values :
+        x = np.arange(len(values)).reshape(-1, 1)
+        y = np.array(values).reshape(-1, 1)
+        model = LinearRegression()
+        model.fit(x, y)
+        slope = model.coef_[0][0]
+        return slope
+    else:
+        return 0
 
 
 # Calculate order flow metrics using dollar bars
