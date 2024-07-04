@@ -36,6 +36,12 @@ def fetch_trades(hours=7):
 
 
 def create_dollar_bars(trade_data, dollar_threshold):
+    # Check if trade_data is empty
+    if trade_data.empty:
+        print("No trade data available.")
+        return pd.DataFrame(columns=['open', 'high', 'low', 'close', 'dollar_volume', 'start_time', 'end_time'])
+
+
     dollar_bars = []
     temp_dollar = 0
     open_price = trade_data['price'].iloc[0]
@@ -43,6 +49,8 @@ def create_dollar_bars(trade_data, dollar_threshold):
     low_price = trade_data['price'].iloc[0]
     close_price = trade_data['price'].iloc[0]
     start_time = trade_data['timestamp'].iloc[0]
+
+
 
     for index, row in trade_data.iterrows():
         trade_dollar = row['price'] * row['volume']
