@@ -183,7 +183,7 @@ def fetch_last_24_hours_signals():
     cursor.execute("""
     SELECT * FROM signals 
     WHERE timestamp >= ? 
-    ORDER BY timestamp DESC
+    ORDER BY timestamp ASC
     """, (start_timestamp,))
     last_24_hours_signals = cursor.fetchall()
 
@@ -204,7 +204,7 @@ def fetch_last_n_hours_signals(hours):
     cursor.execute("""
     SELECT order_flow_signal, order_flow_score FROM signals 
     WHERE timestamp >= ? 
-    ORDER BY timestamp DESC
+    ORDER BY timestamp ASC
     """, (start_timestamp,))
     last_4_hours_signals = cursor.fetchall()
 
@@ -214,7 +214,7 @@ def fetch_last_n_hours_signals(hours):
 def fetch_last_10_signals():
     cursor.execute("""
     SELECT order_flow_signal, order_flow_score, market_pressure FROM signals 
-    ORDER BY timestamp DESC
+    ORDER BY timestamp ASC
     LIMIT 10
     """)
     return cursor.fetchall()
@@ -302,7 +302,7 @@ delta_value_signals = get_spikes(delta_values)
 print(f"Aggressive Ratio Signals: {aggressive_ratio_signals}")
 print(f"Delta Value Signals: {delta_value_signals}")
 # Generate final signal
-final_signal = generate_final_signal(aggressive_ratio_signals, delta_value_signals, cumulative_delta, threshold=10)
+final_signal = generate_final_signal(aggressive_ratio_signals, delta_value_signals, cumulative_delta, threshold=8)
 print(f"Final Signal: {final_signal}")
 
 # Fetch and display the last 'buy' and 'sell' signals

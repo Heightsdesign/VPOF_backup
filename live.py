@@ -280,13 +280,13 @@ def manage_positions(symbol, size, dollar_bars):
     if not open_positions['openPositions']:
         print('No open positions found.')
 
-        if stoch_setup == 'buy' and slope < -10:
+        if stoch_setup == 'buy' and slope > 10:
             print('Placing new buy order.')
             place_order(order_auth, symbol, 'buy', size)
             take_profit, stop_loss = get_stops('XXBTZUSD', 'buy', current_price)
             insert_position(symbol, current_price, 'long', size, take_profit, stop_loss)
 
-        elif stoch_setup == 'sell' and slope > 10:
+        elif stoch_setup == 'sell' and slope < -10:
             print('Placing new sell order.')
             place_order(order_auth, symbol, 'sell', size)
             take_profit, stop_loss = get_stops('XXBTZUSD', 'sell', current_price)
@@ -352,7 +352,7 @@ def run_analysis_and_store_signals():
     delta_value_signals = get_spikes(delta_values)
 
     # Calculate final signal
-    final_signal = generate_final_signal(aggressive_ratio_signals, delta_value_signals, cumulative_delta, threshold=9)
+    final_signal = generate_final_signal(aggressive_ratio_signals, delta_value_signals, cumulative_delta, threshold=8)
 
     print(f"Final signal calculated: {final_signal}")
 
