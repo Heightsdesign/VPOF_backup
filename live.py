@@ -144,11 +144,11 @@ def calculate_average_move(dollar_bars):
         return None
 
     average_move = (dollar_bars['high'] - dollar_bars['low']).mean()
-    return average_move / 2
+    return average_move * 1.5
 
 
-def get_stops(symbol, side, current_price):
-    average_move = calculate_average_move(symbol)
+def get_stops(dollar_bars, side, current_price):
+    average_move = calculate_average_move(dollar_bars)
     take_profit = None
     stop_loss = None
 
@@ -170,16 +170,6 @@ def calculate_slope_pressure(pressure_data):
     slope = model.coef_[0][0]
 
     return slope
-
-
-def define_thresholds(pressure_data):
-
-    mean_pressure = np.mean(pressure_data)
-    std_pressure = np.std(pressure_data)
-    upper_threshold = mean_pressure + 1.5 * std_pressure
-    lower_threshold = mean_pressure - 1.5 * std_pressure
-
-    return upper_threshold, lower_threshold
 
 
 def calculate_dollar_volume_since_open(position_open_time):
@@ -255,7 +245,7 @@ def manage_positions(symbol, size, dollar_bars):
                     place_order(order_auth, symbol, 'buy', position['size'])
                     close_position(position_id, 'stop_loss', current_price)
 
-                elif dollar_volume_since_open >= 2500000:  # Threshold for the dollar-volume-based exit
+                elif dollar_volume_since_open >= 12500000:  # Threshold for the dollar-volume-based exit
                     place_order(order_auth, symbol, 'buy', position['size'])
                     close_position(position_id, 'dollar_volume_exit', current_price)
 
@@ -272,7 +262,7 @@ def manage_positions(symbol, size, dollar_bars):
                     place_order(order_auth, symbol, 'sell', position['size'])
                     close_position(position_id, 'stop_loss', current_price)
 
-                elif dollar_volume_since_open >= 2500000:  # Threshold for the dollar-volume-based exit
+                elif dollar_volume_since_open >= 12500000:  # Threshold for the dollar-volume-based exit
                     place_order(order_auth, symbol, 'buy', position['size'])
                     close_position(position_id, 'dollar_volume_exit', current_price)
 

@@ -173,9 +173,9 @@ def calculate_slope(values):
 
 # Output metrics
 
-print("Latest bar values:")
-print(latest_bar)
-print('\n')
+# print("Latest bar values:")
+# print(latest_bar)
+# print('\n')
 
 print(f"Delta Values: {delta_values}")
 print(f"Cumulative Delta: {cumulative_delta}")
