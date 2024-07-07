@@ -291,7 +291,7 @@ def run_analysis_and_store_signals():
     # print(f"Latest bar inserted: {latest_bar}")
 
     # Manage positions based on the signals
-    manage_positions('PF_XBTUSD', 0.002, dollar_bars)
+    manage_positions('PF_XBTUSD', 0.002, dollar_bars, 7)
     # check_trailing_stop('PF_XBTUSD')
 
 
