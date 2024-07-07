@@ -80,7 +80,7 @@ def fetch_open_position(symbol):
 
 def calculate_stochastic_rsi(df):
     df = ta.stochrsi(df['close'], length=14, rsi_length=14, k=3, d=3)
-    # print(df)
+    print(df)
     return df
 
 
@@ -161,6 +161,7 @@ def manage_positions(symbol, size, dollar_bars, num_bars):
     dollar_volume_since_open = None
 
     print('Open positions from DB:', db_positions)
+    calculate_stochastic_rsi(dollar_bars)
 
     # Get signal
     signal = get_market_signal(num_bars, 3)
