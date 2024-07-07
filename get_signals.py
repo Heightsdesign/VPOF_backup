@@ -82,9 +82,7 @@ def get_price_action_rating(dol_bars, num_bars):
     else:
         return 'neutral', 0
 
-
 def get_market_signal(num_bars, num_ratings):
-
     delta_ratings = []
     price_action_ratings = []
     setup_score = 0
@@ -92,10 +90,10 @@ def get_market_signal(num_bars, num_ratings):
     signal = ""
 
     for i in range(num_ratings):
-        delta_rating = get_delta_rating(delta_values, num_bars * (i+1))
+        delta_rating = get_delta_rating(delta_values, num_bars * (i + 1))
         delta_ratings.append(delta_rating)
 
-        price_action_rating = get_price_action_rating(dollar_bars, num_bars * (i+1))
+        price_action_rating = get_price_action_rating(dollar_bars, num_bars * (i + 1))
         price_action_ratings.append(price_action_rating)
 
         if delta_rating == 'buy':
@@ -103,21 +101,20 @@ def get_market_signal(num_bars, num_ratings):
         elif delta_rating == 'sell':
             setup_score -= 1
 
-    print('Delta Ratings : ',  delta_ratings)
+    print('Delta Ratings : ', delta_ratings)
     print('Price Action Ratings : ', price_action_ratings)
 
     for i in range(len(delta_ratings)):
         if delta_ratings[i] == price_action_ratings[i]:
             matches += 1
 
-    if matches > num_ratings / 2 and setup_score > num_ratings / 2:
+    if matches > num_ratings / 2 and setup_score > 0:
         signal = 'buy'
-
-    elif matches > num_ratings / 2 and setup_score < (num_ratings / 2) * -1:
+    elif matches > num_ratings / 2 and setup_score < 0:
         signal = 'sell'
 
+    print(f"Final Signal : {signal}")
     return signal
-
 
 # Function to fetch the last 'buy' signal
 def fetch_last_buy_signal():
