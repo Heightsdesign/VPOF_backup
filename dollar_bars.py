@@ -75,8 +75,8 @@ def create_dollar_bars(trade_data, dollar_threshold):
             low_price = row['price']
             start_time = end_time
 
-    print(pd.DataFrame(dollar_bars).tail(10))
-    return pd.DataFrame(dollar_bars).tail(7)
+    print(pd.DataFrame(dollar_bars))
+    return pd.DataFrame(dollar_bars)
 
 
 """__________________________________________________________________________________________________________________"""

@@ -60,16 +60,16 @@ def get_delta_rating(deltas, num_bars):
 
 def get_price_action_rating(dol_bars, num_bars):
     # Ensure there are enough bars to analyze
-    if len(dollar_bars) < num_bars:
+    if len(dol_bars) < num_bars:
         return 'Not enough data', None
 
     start_close = dol_bars['close'].iloc[-num_bars]
     end_close = dol_bars['close'].iloc[-1]
 
     if end_close > start_close:
-        return 'buy', end_close - start_close
+        return 'buy'
     elif end_close < start_close:
-        return 'sell', end_close - start_close
+        return 'sell'
     else:
         return 'neutral', 0
 
