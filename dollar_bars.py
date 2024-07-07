@@ -2,6 +2,8 @@ import pandas as pd
 import sqlite3
 from datetime import datetime, timedelta
 
+from constants import dollar_threshold
+
 
 # Database connection
 conn = sqlite3.connect('trading_data.db')
@@ -80,5 +82,5 @@ def create_dollar_bars(trade_data, dollar_threshold):
 """__________________________________________________________________________________________________________________"""
 
 # Fetch trades and create dollar bars
-trade_data = fetch_trades(hours=7)
-dollar_bars = create_dollar_bars(trade_data, dollar_threshold=2500000)
+trade_data = fetch_trades(hours=48)
+dollar_bars = create_dollar_bars(trade_data, dollar_threshold=dollar_threshold)

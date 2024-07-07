@@ -8,12 +8,11 @@ import numpy as np
 import constants
 from sklearn.linear_model import LinearRegression
 
+from constants import dollar_threshold
 from dollar_bars import fetch_trades, create_dollar_bars
-from order_flow_tools import calculate_order_flow_metrics, insert_latest_delta
-from get_signals import (get_spikes, generate_final_signal, market_sentiment_eval,
-                         fetch_last_10_signals, fetch_last_n_hours_signals)
+from get_signals import get_market_signal
 from kraken_toolbox import (get_open_positions, place_order,
-                            fetch_live_price, fetch_last_n_candles, KrakenFuturesAuth)
+                            fetch_live_price, KrakenFuturesAuth)
 
 
 # Database connection
@@ -79,42 +78,6 @@ def fetch_open_position(symbol):
     return open_positions
 
 
-# Function to check if the two most recent signals are 'buy' or 'sell'
-def check_short_term_activity(signals):
-    global stored_signal
-
-    if len(signals) < 3:
-        return None
-
-    buys = 0
-    sells = 0
-
-    for signal in signals:
-        if signal[0] == 'buy':
-            buys += 1
-            sells = 0
-        elif signal[0] == 'sell':
-            sells += 1
-            buys = 0
-
-    if buys >= 3:
-        return 'buy'
-    elif sells >= 3:
-        return 'sell'
-    else:
-        return 'hold'
-
-
-def calculate_atr(df, period=14):
-    df['previous_close'] = df['close'].shift(1)
-    df['H-L'] = df['high'] - df['low']
-    df['H-PC'] = (df['high'] - df['previous_close']).abs()
-    df['L-PC'] = (df['low'] - df['previous_close']).abs()
-    df['TR'] = df[['H-L', 'H-PC', 'L-PC']].max(axis=1)
-    atr = df['TR'].rolling(window=period).mean().iloc[-1]
-    return atr
-
-
 def calculate_stochastic_rsi(df):
     df = ta.stochrsi(df['close'], length=14, rsi_length=14, k=3, d=3)
     # print(df)
@@ -137,21 +100,22 @@ def check_stochastic_setup(df):
         return None
 
 
-def calculate_average_move(dollar_bars):
-    # Check if dollar_bars DataFrame is empty
-    if dollar_bars.empty:
-        print("No dollar bars available.")
+def calculate_average_move(dollar_bars, num_bars):
+    # Check if dollar_bars DataFrame is empty or if it contains fewer bars than num_bars
+    if dollar_bars.empty or len(dollar_bars) < num_bars:
+        print("Not enough dollar bars available.")
         return None
 
-    average_move = (dollar_bars['high'] - dollar_bars['low']).mean()
-    return average_move * 1.5
+    selected_bars = dollar_bars.tail(num_bars)  # Select the last num_bars rows
+    average_move = (selected_bars['high'] - selected_bars['low']).mean()
+    return average_move / 2
 
 
 def get_stops(dollar_bars, side, current_price):
 
     take_profit = None
     stop_loss = None
-    average_move = calculate_average_move(dollar_bars)
+    average_move = calculate_average_move(dollar_bars, 7)
 
     if side == 'buy':
         take_profit = current_price + average_move
@@ -184,22 +148,8 @@ def calculate_dollar_volume_since_open(position_open_time):
     return dollar_volume if dollar_volume is not None else 0
 
 
-def manage_positions(symbol, size, dollar_bars):
+def manage_positions(symbol, size, dollar_bars, num_bars):
     global stored_signal
-
-    # Fetch recent signals and check for consecutive signals
-    last_10_signals = fetch_last_10_signals()
-    short_term_activity = check_short_term_activity(last_10_signals)
-
-    # Market sentiment
-    sentiment_signals = fetch_last_n_hours_signals(1)
-    # market_sentiment = market_sentiment_eval(sentiment_signals)[1]
-
-
-    # Check stochastic setup
-    df = fetch_last_n_candles('XXBTZUSD', num_candles=60)
-    rsi_df = calculate_stochastic_rsi(df)
-    stoch_setup = check_stochastic_setup(rsi_df)
 
     # Fetch positions and current price
     open_positions = get_open_positions(open_pos_auth)
@@ -207,19 +157,14 @@ def manage_positions(symbol, size, dollar_bars):
 
     # Fetch open position from the database
     db_positions = fetch_open_position(symbol)
-    # rsi_value = get_rsi('XXBTZUSD')
-
-    short_term_pressure = [signal[2] for signal in last_10_signals]
 
     dollar_volume_since_open = None
 
-    slope = calculate_slope_pressure(short_term_pressure)
-    print('Pressure Slope : ', slope)
     print('Open positions from DB:', db_positions)
-    # print('RSI:', rsi_value)
-    print('Stochastic Setup : ', stoch_setup)
-    print('Short Term Activity : ', short_term_activity)
-    calculate_average_move(dollar_bars)
+    calculate_average_move(dollar_bars, 7)
+
+    # Get signal
+    signal = get_market_signal(num_bars, 3)
 
     # Extract position details if there are open positions in the database
     if db_positions:
@@ -246,7 +191,7 @@ def manage_positions(symbol, size, dollar_bars):
                     place_order(order_auth, symbol, 'buy', position['size'])
                     close_position(position_id, 'stop_loss', current_price)
 
-                elif dollar_volume_since_open >= 12500000:  # Threshold for the dollar-volume-based exit
+                elif dollar_volume_since_open >= dollar_threshold * num_bars:
                     place_order(order_auth, symbol, 'buy', position['size'])
                     close_position(position_id, 'dollar_volume_exit', current_price)
 
@@ -263,7 +208,7 @@ def manage_positions(symbol, size, dollar_bars):
                     place_order(order_auth, symbol, 'sell', position['size'])
                     close_position(position_id, 'stop_loss', current_price)
 
-                elif dollar_volume_since_open >= 12500000:  # Threshold for the dollar-volume-based exit
+                elif dollar_volume_since_open >= dollar_threshold * num_bars:
                     place_order(order_auth, symbol, 'sell', position['size'])
                     close_position(position_id, 'dollar_volume_exit', current_price)
 
@@ -271,13 +216,13 @@ def manage_positions(symbol, size, dollar_bars):
     if not open_positions['openPositions']:
         print('No open positions found.')
 
-        if slope > 100:
+        if signal == 'buy':
             print('Placing new buy order.')
             place_order(order_auth, symbol, 'buy', size)
             take_profit, stop_loss = get_stops(dollar_bars, 'buy', current_price)
             insert_position(symbol, current_price, 'long', size, take_profit, stop_loss)
 
-        elif slope < -100:
+        elif signal == 'sell':
             print('Placing new sell order.')
             place_order(order_auth, symbol, 'sell', size)
             take_profit, stop_loss = get_stops(dollar_bars, 'sell', current_price)
@@ -331,35 +276,15 @@ def run_analysis_and_store_signals():
 
     print("Dollar bars created successfully")
 
-    # Your analysis logic
-    (delta_values, cumulative_delta, min_delta_values,
-     max_delta_values, market_buy_ratios, market_sell_ratios,
-     buy_volumes, sell_volumes, aggressive_buy_activities,
-     aggressive_sell_activities, aggressive_ratios, latest_bar) = calculate_order_flow_metrics(dollar_bars)
-
-    print("Order flow metrics calculated")
-
-    aggressive_ratio_signals = get_spikes(aggressive_ratios)
-    delta_value_signals = get_spikes(delta_values)
-
-    # Calculate final signal
-    final_signal = generate_final_signal(aggressive_ratio_signals, delta_value_signals, cumulative_delta, threshold=8)
-
-    print(f"Final signal calculated: {final_signal}")
-
-    # Market sentiment
-    sentiment_signals = fetch_last_n_hours_signals(1)
-    market_pressure = market_sentiment_eval(sentiment_signals)[0]
-
-    print(f"Market pressure calculated: {market_pressure}")
-
     # Assuming 'volume_profile_signal' and 'price_action_signal' are obtained from other analyses
     volume_profile_signal = "N/A"  # Placeholder
     price_action_signal = "N/A"  # Placeholder
 
     # Insert the signal into the database
     timestamp = int(datetime.now(timezone.utc).timestamp())
-    insert_signal(timestamp, final_signal[0], final_signal[1], market_pressure, volume_profile_signal, price_action_signal)
+
+    signal = get_market_signal(7, 3)
+    insert_signal(timestamp, signal, None, None, volume_profile_signal, price_action_signal)
 
     # Insert the latest delta values into the database
     # insert_latest_delta(latest_bar)
