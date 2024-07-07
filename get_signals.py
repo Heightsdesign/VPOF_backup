@@ -82,6 +82,7 @@ def get_price_action_rating(dol_bars, num_bars):
     else:
         return 'neutral', 0
 
+
 def get_market_signal(num_bars, num_ratings):
     delta_ratings = []
     price_action_ratings = []
