@@ -161,7 +161,6 @@ def manage_positions(symbol, size, dollar_bars, num_bars):
     dollar_volume_since_open = None
 
     print('Open positions from DB:', db_positions)
-    calculate_average_move(dollar_bars, 7)
 
     # Get signal
     signal = get_market_signal(num_bars, 3)
