@@ -24,39 +24,45 @@ def get_delta_rating(deltas, num_bars):
     if len(deltas) < num_bars:
         return 'Not enough data', None
 
-    cum_delta= 0
+    cum_delta = 0
     positive_deltas = 0
     negative_deltas = 0
-    delta_score = 0
-    cum_delta_score = 0
 
     for delta in deltas[-num_bars:]:
         if delta > 0:
             positive_deltas += 1
         elif delta < 0:
-            negative_deltas -= 1
+            negative_deltas += 1
 
         cum_delta += delta
 
-    if positive_deltas + negative_deltas > 0:
+    # Determine delta score
+    if positive_deltas > negative_deltas:
         delta_score = 1
-    elif positive_deltas + negative_deltas < 0:
+    elif negative_deltas > positive_deltas:
         delta_score = -1
+    else:
+        delta_score = 0
 
-    if  cum_delta > 0:
+    # Determine cumulative delta score
+    if cum_delta > 0:
         cum_delta_score = 1
-    elif cumulative_delta < 0:
+    elif cum_delta < 0:
         cum_delta_score = -1
+    else:
+        cum_delta_score = 0
 
-    if cum_delta_score + delta_score == 2:
+    # Final rating based on delta_score and cum_delta_score
+    total_score = cum_delta_score + delta_score
+    if total_score == 2:
         rating = "buy"
-    elif cum_delta_score + delta_score == -2:
+    elif total_score == -2:
         rating = "sell"
     else:
         rating = 'hold'
 
-    print('Deltas : ', deltas[-num_bars:])
-    print('Cumulative Delta : ', cum_delta)
+    print('Deltas:', deltas[-num_bars:])
+    print('Cumulative Delta:', cum_delta)
 
     return rating
 
