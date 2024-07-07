@@ -55,6 +55,9 @@ def get_delta_rating(deltas, num_bars):
     else:
         rating = 'hold'
 
+    print('Deltas : ', deltas[-num_bars:])
+    print('Cumulative Delta : ', cum_delta)
+
     return rating
 
 
@@ -67,9 +70,9 @@ def get_price_action_rating(dol_bars, num_bars):
     end_close = dol_bars['close'].iloc[-1]
 
     if end_close > start_close:
-        return 'buy'
-    elif end_close < start_close:
         return 'sell'
+    elif end_close < start_close:
+        return 'buy'
     else:
         return 'neutral', 0
 
