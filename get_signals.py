@@ -70,9 +70,9 @@ def get_price_action_rating(dol_bars, num_bars):
     end_close = dol_bars['close'].iloc[-1]
 
     if end_close > start_close:
-        return 'sell'
-    elif end_close < start_close:
         return 'buy'
+    elif end_close < start_close:
+        return 'sell'
     else:
         return 'neutral', 0
 
