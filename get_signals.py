@@ -272,6 +272,7 @@ print('\n')
 # print('\n')
 
 print(get_market_signal(dollar_bars,7, 3))
+print(calculate_stochastic_rsi(dollar_bars))
 
 
 # Fetch last ten signals
