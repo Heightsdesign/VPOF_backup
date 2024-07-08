@@ -173,6 +173,10 @@ def manage_positions(symbol, size, dollar_bars, num_bars):
                     place_order(order_auth, symbol, 'buy', position['size'])
                     close_position(position_id, 'dollar_volume_exit', current_price)
 
+                elif signal == 'buy':
+                    place_order(order_auth, symbol, 'buy', position['size'])
+                    close_position(position_id, 'market_switch_exit', current_price)
+
             elif position['symbol'] == symbol and position['side'] == 'long':
                 print('Evaluating long position for symbol:', symbol)
 
@@ -189,6 +193,10 @@ def manage_positions(symbol, size, dollar_bars, num_bars):
                 elif dollar_volume_since_open >= dollar_threshold * num_bars:
                     place_order(order_auth, symbol, 'sell', position['size'])
                     close_position(position_id, 'dollar_volume_exit', current_price)
+
+                elif signal == 'sell':
+                    place_order(order_auth, symbol, 'sell', position['size'])
+                    close_position(position_id, 'market_switch_exit', current_price)
 
     # Conditions to OPEN positions
     if not open_positions['openPositions']:
