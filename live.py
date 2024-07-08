@@ -6,6 +6,7 @@ from datetime import datetime, timezone
 import numpy as np
 import constants
 from sklearn.linear_model import LinearRegression
+from order_flow_tools import calculate_order_flow_metrics
 
 from constants import dollar_threshold
 from dollar_bars import fetch_trades, create_dollar_bars
@@ -252,6 +253,12 @@ def run_analysis_and_store_signals():
         return
 
     print("Dollar bars created successfully")
+
+    # Calculate order flow metrics using dollar bars
+    (delta_values, cumulative_delta, min_delta_values,
+     max_delta_values, market_buy_ratios, market_sell_ratios,
+     buy_volumes, sell_volumes, aggressive_buy_activities,
+     aggressive_sell_activities, aggressive_ratios, latest_bar) = calculate_order_flow_metrics(dollar_bars)
 
     # Assuming 'volume_profile_signal' and 'price_action_signal' are obtained from other analyses
     volume_profile_signal = "N/A"  # Placeholder

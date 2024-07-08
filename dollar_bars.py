@@ -10,7 +10,7 @@ conn = sqlite3.connect('trading_data.db')
 cursor = conn.cursor()
 
 
-def fetch_trades(hours=7):
+def fetch_trades(hours):
     # Calculate the timestamp for the starting point
     current_time = datetime.now()
     start_time = current_time - timedelta(hours=hours)
@@ -37,7 +37,7 @@ def fetch_trades(hours=7):
     return trade_data
 
 
-def create_dollar_bars(trade_data, dollar_threshold):
+def create_dollar_bars(trade_data, threshold):
     # Check if trade_data is empty
     if trade_data.empty:
         print("No trade data available.")
@@ -82,5 +82,6 @@ def create_dollar_bars(trade_data, dollar_threshold):
 """__________________________________________________________________________________________________________________"""
 
 # Fetch trades and create dollar bars
-trade_data = fetch_trades(hours=48)
-dollar_bars = create_dollar_bars(trade_data, dollar_threshold=dollar_threshold)
+data = fetch_trades(48)
+dollar_bars = create_dollar_bars(data, threshold=dollar_threshold)
+

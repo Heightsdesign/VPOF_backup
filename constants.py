@@ -9,4 +9,3 @@ kraken_public_key = os.getenv('KRAKEN_PUBLIC')
 kraken_private_key = os.getenv('KRAKEN_PRIVATE')
 
 dollar_threshold = 3500000
-

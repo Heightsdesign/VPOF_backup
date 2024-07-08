@@ -12,16 +12,8 @@ conn = sqlite3.connect('trading_data.db')
 cursor = conn.cursor()
 
 
-# Calculate order flow metrics using dollar bars
-(delta_values, cumulative_delta, min_delta_values,
- max_delta_values, market_buy_ratios, market_sell_ratios,
- buy_volumes, sell_volumes, aggressive_buy_activities,
- aggressive_sell_activities, aggressive_ratios, latest_bar) = calculate_order_flow_metrics(dollar_bars)
-
-
 def calculate_stochastic_rsi(df):
     df = ta.stochrsi(df['close'], length=14, rsi_length=14, k=3, d=3)
-    print(df)
     return df
 
 
@@ -107,18 +99,19 @@ def get_price_action_rating(dol_bars, num_bars):
 
 
 def get_market_signal(num_bars, num_ratings):
+    # Calculate order flow metrics using dollar bars
+    (delta_values, cumulative_delta, min_delta_values,
+     max_delta_values, market_buy_ratios, market_sell_ratios,
+     buy_volumes, sell_volumes, aggressive_buy_activities,
+     aggressive_sell_activities, aggressive_ratios, latest_bar) = calculate_order_flow_metrics(dollar_bars)
+
     delta_ratings = []
-    price_action_ratings = []
     setup_score = 0
-    matches = 0
     signal = ""
 
     for i in range(num_ratings):
-        delta_rating = get_delta_rating(delta_values, num_bars * (i + 1))
+        delta_rating = get_delta_rating(aggressive_ratios, num_bars * (i + 1))
         delta_ratings.append(delta_rating)
-
-        price_action_rating = get_price_action_rating(dollar_bars, num_bars * (i + 1))
-        price_action_ratings.append(price_action_rating)
 
         if delta_rating == 'buy':
             setup_score += 1
@@ -126,16 +119,14 @@ def get_market_signal(num_bars, num_ratings):
             setup_score -= 1
 
     print('Delta Ratings : ', delta_ratings)
-    print('Price Action Ratings : ', price_action_ratings)
 
-    for i in range(len(delta_ratings)):
-        if delta_ratings[i] == price_action_ratings[i]:
-            matches += 1
-
-    if matches > num_ratings / 2 and setup_score > 0:
+    # Determine the final signal based on the delta ratings
+    if delta_ratings[0] == 'buy' and setup_score >= 0:
         signal = 'buy'
-    elif matches > num_ratings / 2 and setup_score < 0:
+    elif delta_ratings[0] == 'sell' and setup_score <= 0:
         signal = 'sell'
+    else:
+        signal = 'hold'
 
     print(f"Final Signal : {signal}")
     return signal

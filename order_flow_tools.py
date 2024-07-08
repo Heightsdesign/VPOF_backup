@@ -3,7 +3,7 @@ from datetime import timedelta
 import numpy as np
 from sklearn.linear_model import LinearRegression
 
-from dollar_bars import dollar_bars
+from dollar_bars import dollar_bars, short_term_dollar_bars
 
 # Variables
 time_frame_minutes = 5  # Adjust this variable as needed
@@ -167,6 +167,8 @@ def calculate_slope(values):
  max_delta_values, market_buy_ratios, market_sell_ratios,
  buy_volumes, sell_volumes, aggressive_buy_activities,
  aggressive_sell_activities, aggressive_ratios, latest_bar) = calculate_order_flow_metrics(dollar_bars)
+
+
 
 # Insert the latest delta values into the database
 # insert_latest_delta(latest_bar)
