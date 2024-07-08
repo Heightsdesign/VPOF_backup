@@ -179,8 +179,8 @@ def calculate_slope(values):
 # print(latest_bar)
 # print('\n')
 
-# print(f"Delta Values: {delta_values}")
-# print(f"Cumulative Delta: {cumulative_delta}")
+print(f"Delta Values: {delta_values}")
+print(f"Cumulative Delta: {cumulative_delta}")
 # print(f"Min Delta Values: {min_delta_values}")
 # print(f"Max Delta Values: {max_delta_values}")
 # print(f"Market Buy Ratios: {market_buy_ratios}")
