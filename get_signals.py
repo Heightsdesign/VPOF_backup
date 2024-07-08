@@ -271,7 +271,7 @@ print('\n')
 # print(fetch_last_n_hours_signals(24))
 # print('\n')
 
-print(get_market_signal(7, 3))
+print(get_market_signal(dollar_bars,7, 3))
 
 
 # Fetch last ten signals
