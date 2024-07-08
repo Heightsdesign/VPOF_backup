@@ -41,7 +41,6 @@ def check_stochastic_setup(df):
         return None
 
 
-
 # Function to score signals and generate a final decision
 def get_delta_rating(deltas, num_bars):
     # Ensure there are enough bars to analyze
@@ -140,6 +139,7 @@ def get_market_signal(num_bars, num_ratings):
 
     print(f"Final Signal : {signal}")
     return signal
+
 
 # Function to fetch the last 'buy' signal
 def fetch_last_buy_signal():
@@ -276,12 +276,12 @@ def print_positions(positions):
 """__________________________________________________________________________________________________________________"""
 
 
-print(calculate_stochastic_rsi(dollar_bars))
+print(calculate_stochastic_rsi(dollar_bars).tail(10))
 print('\n')
 
 # Fetch last n hours signals
-print(fetch_last_n_hours_signals(24))
-print('\n')
+# print(fetch_last_n_hours_signals(24))
+# print('\n')
 
 print(get_market_signal(7, 3))
 
