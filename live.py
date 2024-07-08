@@ -6,7 +6,6 @@ from datetime import datetime, timezone
 import numpy as np
 import constants
 from sklearn.linear_model import LinearRegression
-from order_flow_tools import calculate_order_flow_metrics
 
 from constants import dollar_threshold
 from dollar_bars import fetch_trades, create_dollar_bars
@@ -127,7 +126,6 @@ def calculate_dollar_volume_since_open(position_open_time):
 
 
 def manage_positions(symbol, size, dollar_bars, num_bars):
-    global stored_signal
 
     # Fetch positions and current price
     open_positions = get_open_positions(open_pos_auth)
@@ -262,25 +260,9 @@ def run_analysis_and_store_signals():
 
     print("Dollar bars created successfully")
 
-    # Calculate order flow metrics using dollar bars
-    (delta_values, cumulative_delta, min_delta_values,
-     max_delta_values, market_buy_ratios, market_sell_ratios,
-     buy_volumes, sell_volumes, aggressive_buy_activities,
-     aggressive_sell_activities, aggressive_ratios, latest_bar) = calculate_order_flow_metrics(dollar_bars)
-
     # Assuming 'volume_profile_signal' and 'price_action_signal' are obtained from other analyses
     volume_profile_signal = "N/A"  # Placeholder
     price_action_signal = "N/A"  # Placeholder
-
-    # Insert the signal into the database
-    timestamp = int(datetime.now(timezone.utc).timestamp())
-
-    signal = get_market_signal(7, 3)
-    insert_signal(timestamp, signal, None, None, volume_profile_signal, price_action_signal)
-
-    # Insert the latest delta values into the database
-    # insert_latest_delta(latest_bar)
-    # print(f"Latest bar inserted: {latest_bar}")
 
     # Manage positions based on the signals
     manage_positions('PF_XBTUSD', 0.002, dollar_bars, 7)

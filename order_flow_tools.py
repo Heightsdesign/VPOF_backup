@@ -133,21 +133,6 @@ def calculate_order_flow_metrics(dol_bars):
             aggressive_sell_activities, aggressive_ratios, latest_bar)
 
 
-def insert_latest_delta(latest_bar):
-    # Check if the entry already exists in the database
-    cursor.execute("""
-    SELECT 1 FROM deltas WHERE start_time = ?
-    """, (int(latest_bar['timestamp'].timestamp()),))
-    if cursor.fetchone() is None:
-        cursor.execute("""
-        INSERT INTO deltas (start_time, end_time, total_delta, min_delta, max_delta, buy_volume, sell_volume)
-        VALUES (?, ?, ?, ?, ?, ?, ?)
-        """, (int(latest_bar['timestamp'].timestamp()), int(latest_bar['timestamp'].timestamp()),
-              latest_bar['total_delta'], latest_bar['min_delta'], latest_bar['max_delta'],
-              latest_bar['buy_volume'], latest_bar['sell_volume']))
-        conn.commit()
-
-
 def calculate_slope(values):
     if values :
         x = np.arange(len(values)).reshape(-1, 1)

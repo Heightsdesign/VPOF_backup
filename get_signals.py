@@ -99,6 +99,7 @@ def get_price_action_rating(dol_bars, num_bars):
 
 
 def get_market_signal(num_bars, num_ratings):
+
     # Calculate order flow metrics using dollar bars
     (delta_values, cumulative_delta, min_delta_values,
      max_delta_values, market_buy_ratios, market_sell_ratios,
@@ -107,7 +108,6 @@ def get_market_signal(num_bars, num_ratings):
 
     delta_ratings = []
     setup_score = 0
-    signal = ""
 
     for i in range(num_ratings):
         delta_rating = get_delta_rating(aggressive_ratios, num_bars * (i + 1))
