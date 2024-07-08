@@ -98,9 +98,7 @@ def get_price_action_rating(dol_bars, num_bars):
         return 'neutral', 0
 
 
-def get_market_signal(num_bars, num_ratings):
-
-    # Calculate order flow metrics using dollar bars
+def get_market_signal(dollar_bars, num_bars, num_ratings):
     (delta_values, cumulative_delta, min_delta_values,
      max_delta_values, market_buy_ratios, market_sell_ratios,
      buy_volumes, sell_volumes, aggressive_buy_activities,
@@ -120,7 +118,6 @@ def get_market_signal(num_bars, num_ratings):
 
     print('Delta Ratings : ', delta_ratings)
 
-    # Determine the final signal based on the delta ratings
     if delta_ratings[0] == 'buy' and setup_score > 0:
         signal = 'buy'
     elif delta_ratings[0] == 'sell' and setup_score < 0:

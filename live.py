@@ -126,21 +126,17 @@ def calculate_dollar_volume_since_open(position_open_time):
 
 
 def manage_positions(symbol, size, dollar_bars, num_bars):
-
     # Fetch positions and current price
     open_positions = get_open_positions(open_pos_auth)
     current_price = fetch_live_price(symbol)['last_price']
-
-    # Fetch open position from the database
     db_positions = fetch_open_position(symbol)
 
-    dollar_volume_since_open = None
-
     print('Open positions from DB:', db_positions)
-    calculate_stochastic_rsi(dollar_bars)
 
     # Get signal
-    signal = get_market_signal(num_bars, 3)
+    signal = get_market_signal(dollar_bars, num_bars, 3)
+
+    print(f"Market Signal: {signal}")
 
     # Extract position details if there are open positions in the database
     if db_positions:
@@ -253,20 +249,14 @@ def run_analysis_and_store_signals():
     trade_data = fetch_trades(hours=48)
     dollar_bars = create_dollar_bars(trade_data, threshold=constants.dollar_threshold)
 
-    # Check if dollar_bars DataFrame is valid
     if dollar_bars.empty:
         print("No dollar bars available for analysis.")
         return
 
     print("Dollar bars created successfully")
 
-    # Assuming 'volume_profile_signal' and 'price_action_signal' are obtained from other analyses
-    volume_profile_signal = "N/A"  # Placeholder
-    price_action_signal = "N/A"  # Placeholder
-
     # Manage positions based on the signals
     manage_positions('PF_XBTUSD', 0.002, dollar_bars, 7)
-    # check_trailing_stop('PF_XBTUSD')
 
 
 # Periodically run the analysis and store signals
