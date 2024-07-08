@@ -3,14 +3,13 @@ import json
 import sqlite3
 import websockets
 from datetime import datetime, timezone
-import pandas_ta as ta
 import numpy as np
 import constants
 from sklearn.linear_model import LinearRegression
 
 from constants import dollar_threshold
 from dollar_bars import fetch_trades, create_dollar_bars
-from get_signals import get_market_signal
+from get_signals import get_market_signal, calculate_stochastic_rsi
 from kraken_toolbox import (get_open_positions, place_order,
                             fetch_live_price, KrakenFuturesAuth)
 
@@ -78,28 +77,6 @@ def fetch_open_position(symbol):
     return open_positions
 
 
-def calculate_stochastic_rsi(df):
-    df = ta.stochrsi(df['close'], length=14, rsi_length=14, k=3, d=3)
-    print(df)
-    return df
-
-
-def check_stochastic_setup(df):
-
-    print(df.iloc[-1])
-
-    # Check for buy setup (if %K > %D and %K < 20)
-    if df['STOCHRSId_14_14_3_3'].iloc[-1] < df['STOCHRSIk_14_14_3_3'].iloc[-1]:
-        return 'buy'
-
-    # Check for sell setup (if %D > %K and %K > 80)
-    elif df['STOCHRSId_14_14_3_3'].iloc[-1] > df['STOCHRSIk_14_14_3_3'].iloc[-1]:
-        return 'sell'
-
-    else:
-        return None
-
-
 def calculate_average_move(dollar_bars, num_bars):
     # Check if dollar_bars DataFrame is empty or if it contains fewer bars than num_bars
     if dollar_bars.empty or len(dollar_bars) < num_bars:
@@ -108,7 +85,7 @@ def calculate_average_move(dollar_bars, num_bars):
 
     selected_bars = dollar_bars.tail(num_bars)  # Select the last num_bars rows
     average_move = (selected_bars['high'] - selected_bars['low']).mean()
-    return average_move / 2
+    return average_move * 2
 
 
 def get_stops(dollar_bars, side, current_price):

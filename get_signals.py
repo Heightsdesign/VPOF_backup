@@ -4,6 +4,7 @@ from datetime import datetime, timezone, timedelta
 
 from order_flow_tools import calculate_order_flow_metrics
 from dollar_bars import dollar_bars
+import pandas_ta as ta
 
 
 # Ensure the database connection is open
@@ -16,6 +17,29 @@ cursor = conn.cursor()
  max_delta_values, market_buy_ratios, market_sell_ratios,
  buy_volumes, sell_volumes, aggressive_buy_activities,
  aggressive_sell_activities, aggressive_ratios, latest_bar) = calculate_order_flow_metrics(dollar_bars)
+
+
+def calculate_stochastic_rsi(df):
+    df = ta.stochrsi(df['close'], length=14, rsi_length=14, k=3, d=3)
+    print(df)
+    return df
+
+
+def check_stochastic_setup(df):
+
+    print(df.iloc[-1])
+
+    # Check for buy setup (if %K > %D and %K < 20)
+    if df['STOCHRSId_14_14_3_3'].iloc[-1] < df['STOCHRSIk_14_14_3_3'].iloc[-1]:
+        return 'buy'
+
+    # Check for sell setup (if %D > %K and %K > 80)
+    elif df['STOCHRSId_14_14_3_3'].iloc[-1] > df['STOCHRSIk_14_14_3_3'].iloc[-1]:
+        return 'sell'
+
+    else:
+        return None
+
 
 
 # Function to score signals and generate a final decision
@@ -252,11 +276,15 @@ def print_positions(positions):
 """__________________________________________________________________________________________________________________"""
 
 
+print(calculate_stochastic_rsi(dollar_bars))
+print('\n')
+
 # Fetch last n hours signals
 print(fetch_last_n_hours_signals(24))
 print('\n')
 
 print(get_market_signal(7, 3))
+
 
 # Fetch last ten signals
 # print(fetch_last_10_signals())
