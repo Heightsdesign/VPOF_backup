@@ -3,7 +3,7 @@ from datetime import timedelta
 import numpy as np
 from sklearn.linear_model import LinearRegression
 
-from dollar_bars import dollar_bars, short_term_dollar_bars
+from dollar_bars import dollar_bars
 
 # Variables
 time_frame_minutes = 5  # Adjust this variable as needed

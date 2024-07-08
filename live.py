@@ -245,7 +245,7 @@ def run_analysis_and_store_signals():
 
     # Fetch trades and create dollar bars
     trade_data = fetch_trades(hours=48)
-    dollar_bars = create_dollar_bars(trade_data, dollar_threshold=2500000)
+    dollar_bars = create_dollar_bars(trade_data, threshold=constants.dollar_threshold)
 
     # Check if dollar_bars DataFrame is valid
     if dollar_bars.empty:
