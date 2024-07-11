@@ -22,11 +22,11 @@ def check_stochastic_setup(df):
     print(df.iloc[-1])
 
     # Check for buy setup (if %K > %D and %K < 20)
-    if df['STOCHRSId_14_14_3_3'].iloc[-1] < df['STOCHRSIk_14_14_3_3'].iloc[-1]:
+    if df['STOCHRSId_14_14_3_3'].iloc[-1] < df['STOCHRSIk_14_14_3_3'].iloc[-1] < 20:
         return 'buy'
 
     # Check for sell setup (if %D > %K and %K > 80)
-    elif df['STOCHRSId_14_14_3_3'].iloc[-1] > df['STOCHRSIk_14_14_3_3'].iloc[-1]:
+    elif df['STOCHRSId_14_14_3_3'].iloc[-1] > df['STOCHRSIk_14_14_3_3'].iloc[-1] > 80:
         return 'sell'
 
     else:
@@ -264,7 +264,7 @@ def print_positions(positions):
 """__________________________________________________________________________________________________________________"""
 
 
-print(calculate_stochastic_rsi(dollar_bars).tail(10))
+print(calculate_stochastic_rsi(dollar_bars).tail(20))
 print('\n')
 
 # Fetch last n hours signals
@@ -272,7 +272,6 @@ print('\n')
 # print('\n')
 
 print(get_market_signal(dollar_bars,7, 3))
-print(calculate_stochastic_rsi(dollar_bars))
 
 
 # Fetch last ten signals
