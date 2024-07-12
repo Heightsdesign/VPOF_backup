@@ -140,9 +140,9 @@ def get_market_signal(dollar_bars, num_bars, num_ratings):
 
     print('Delta Ratings : ', delta_ratings)
 
-    if setup_score > 0:
+    if setup_score > len(delta_ratings) / 2:
         signal = 'buy'
-    elif setup_score < 0:
+    elif setup_score < len(delta_ratings) / 2:
         signal = 'sell'
     else:
         signal = 'hold'

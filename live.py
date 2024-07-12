@@ -249,7 +249,7 @@ async def kraken_websocket():
 def run_analysis_and_store_signals():
 
     # Fetch trades and create dollar bars
-    trade_data = fetch_trades(hours=48)
+    trade_data = fetch_trades(hours=72)
     dollar_bars = create_dollar_bars(trade_data, threshold=constants.dollar_threshold)
 
     if dollar_bars.empty:
