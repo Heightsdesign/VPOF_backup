@@ -17,6 +17,19 @@ def calculate_stochastic_rsi(df):
     return df
 
 
+def get_rsi(dol_bars, period=14):
+    # Check if dollar_bars DataFrame is empty
+    if dol_bars.empty:
+        print("No dollar bars available.")
+        return None
+
+    # Calculate RSI
+    dollar_bars['RSI'] = ta.rsi(dollar_bars['close'], length=period)
+
+    # Return the last RSI value as an integer
+    return int(dollar_bars['RSI'].iloc[-1])
+
+
 def check_stochastic_setup(df):
 
     print(df.iloc[-1])
@@ -116,11 +129,18 @@ def get_market_signal(dollar_bars, num_bars, num_ratings):
         elif delta_rating == 'sell':
             setup_score -= 1
 
+    long_term_rating = get_delta_rating(aggressive_ratios, 42)
+
+    if long_term_rating == 'buy':
+        setup_score += 1
+    elif long_term_rating == 'sell':
+        setup_score -= 1
+
     print('Delta Ratings : ', delta_ratings)
 
-    if delta_ratings[0] == 'buy' and setup_score > 0:
+    if setup_score > 0:
         signal = 'buy'
-    elif delta_ratings[0] == 'sell' and setup_score < 0:
+    elif setup_score < 0:
         signal = 'sell'
     else:
         signal = 'hold'
@@ -272,6 +292,7 @@ print('\n')
 # print('\n')
 
 print(get_market_signal(dollar_bars,7, 3))
+print('RSI : ', get_rsi(dollar_bars))
 
 
 # Fetch last ten signals
