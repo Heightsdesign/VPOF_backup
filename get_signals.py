@@ -129,10 +129,12 @@ def get_market_signal(dollar_bars, num_bars, num_ratings):
         elif delta_rating == 'sell':
             setup_score -= 1
 
-    long_term_rating = get_delta_rating(aggressive_ratios, 42)
+    long_term_rating = get_delta_rating(aggressive_ratios, 49)
+    delta_ratings.append(long_term_rating)
 
     if long_term_rating == 'buy':
         setup_score += 1
+
     elif long_term_rating == 'sell':
         setup_score -= 1
 
