@@ -88,6 +88,7 @@ def get_price_action_rating(dol_bars, num_bars):
 
 
 def get_market_signal(dollar_bars, num_bars, num_ratings):
+
     (delta_values, cumulative_delta, min_delta_values,
      max_delta_values, market_buy_ratios, market_sell_ratios,
      buy_volumes, sell_volumes, aggressive_buy_activities,
@@ -127,6 +128,7 @@ def get_market_signal(dollar_bars, num_bars, num_ratings):
 
     print('Delta Ratings : ', delta_ratings)
     print('Total Cumulative Delta', total_cum_delta)
+    print('Setup Score : ', setup_score)
 
     if setup_score > len(delta_ratings) / 2:
         signal = 'buy'
