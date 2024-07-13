@@ -122,7 +122,7 @@ def get_market_signal(dollar_bars, num_bars, num_ratings):
 
     if total_cum_delta > 0:
         setup_score += 1
-    else:
+    elif total_cum_delta < 0:
         setup_score -= 1
 
     print('Delta Ratings : ', delta_ratings)
