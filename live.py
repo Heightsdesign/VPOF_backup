@@ -10,8 +10,8 @@ from sklearn.linear_model import LinearRegression
 from constants import dollar_threshold
 from dollar_bars import fetch_trades, create_dollar_bars
 from get_signals import get_market_signal, calculate_stochastic_rsi, check_stochastic_setup, get_rsi
-from kraken_toolbox import (get_open_positions, place_order,
-                            fetch_live_price, KrakenFuturesAuth)
+from kraken_toolbox import (get_open_positions, place_order, fetch_live_price,
+                            fetch_last_n_candles, KrakenFuturesAuth)
 
 
 # Database connection
@@ -137,7 +137,8 @@ def manage_positions(symbol, size, dollar_bars, num_bars):
     signal = get_market_signal(dollar_bars, num_bars, 3)
     stoch_rsi = calculate_stochastic_rsi(dollar_bars)
     setup = check_stochastic_setup(stoch_rsi)
-    rsi = get_rsi(dollar_bars)
+    five_m_candles = fetch_last_n_candles(5, 60)
+    rsi = get_rsi(five_m_candles)
 
     print(f"Market Signal: {signal}")
 
@@ -199,13 +200,13 @@ def manage_positions(symbol, size, dollar_bars, num_bars):
     if not open_positions['openPositions']:
         print('No open positions found.')
 
-        if signal == 'buy' and rsi < 30:
+        if signal == 'buy' and rsi < 40:
             print('Placing new buy order.')
             place_order(order_auth, symbol, 'buy', size)
             take_profit, stop_loss = get_stops(dollar_bars, 'buy', current_price)
             insert_position(symbol, current_price, 'long', size, take_profit, stop_loss)
 
-        elif signal == 'sell' and rsi > 70:
+        elif signal == 'sell' and rsi > 60:
             print('Placing new sell order.')
             place_order(order_auth, symbol, 'sell', size)
             take_profit, stop_loss = get_stops(dollar_bars, 'sell', current_price)

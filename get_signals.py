@@ -1,10 +1,11 @@
 import numpy as np
 import sqlite3
 from datetime import datetime, timezone, timedelta
+import pandas_ta as ta
 
 from order_flow_tools import calculate_order_flow_metrics
 from dollar_bars import dollar_bars
-import pandas_ta as ta
+
 
 
 # Ensure the database connection is open
@@ -17,17 +18,17 @@ def calculate_stochastic_rsi(df):
     return df
 
 
-def get_rsi(dol_bars, period=14):
+def get_rsi(df, period=14):
     # Check if dollar_bars DataFrame is empty
-    if dol_bars.empty:
+    if df.empty:
         print("No dollar bars available.")
         return None
 
     # Calculate RSI
-    dollar_bars['RSI'] = ta.rsi(dollar_bars['close'], length=period)
+    df['RSI'] = ta.rsi(df['close'], length=period)
 
     # Return the last RSI value as an integer
-    return int(dollar_bars['RSI'].iloc[-1])
+    return int(df['RSI'].iloc[-1])
 
 
 def check_stochastic_setup(df):
