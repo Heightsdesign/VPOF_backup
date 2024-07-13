@@ -53,41 +53,16 @@ def get_delta_rating(deltas, num_bars):
         return 'Not enough data', None
 
     cum_delta = 0
-    positive_deltas = 0
-    negative_deltas = 0
 
     for delta in deltas[-num_bars:]:
-        if delta > 0:
-            positive_deltas += 1
-        elif delta < 0:
-            negative_deltas += 1
-
         cum_delta += delta
 
-    # Determine delta score
-    if positive_deltas > negative_deltas:
-        delta_score = 1
-    elif negative_deltas > positive_deltas:
-        delta_score = -1
-    else:
-        delta_score = 0
-
-    # Determine cumulative delta score
     if cum_delta > 0:
-        cum_delta_score = 1
+        rating = ["buy", cum_delta]
     elif cum_delta < 0:
-        cum_delta_score = -1
+        rating = ["sell", cum_delta]
     else:
-        cum_delta_score = 0
-
-    # Final rating based on delta_score and cum_delta_score
-    total_score = cum_delta_score + delta_score
-    if total_score == 2:
-        rating = "buy"
-    elif total_score == -2:
-        rating = "sell"
-    else:
-        rating = 'hold'
+        rating = ['hold', cum_delta]
 
     print('Deltas:', deltas[-num_bars:])
     print('Cumulative Delta:', cum_delta)
@@ -119,26 +94,38 @@ def get_market_signal(dollar_bars, num_bars, num_ratings):
 
     delta_ratings = []
     setup_score = 0
+    total_cum_delta = 0
 
     for i in range(num_ratings):
         delta_rating = get_delta_rating(aggressive_ratios, num_bars * (i + 1))
         delta_ratings.append(delta_rating)
 
-        if delta_rating == 'buy':
+        if delta_rating[0] == 'buy':
             setup_score += 1
+            total_cum_delta += delta_rating[1]
+
         elif delta_rating == 'sell':
             setup_score -= 1
+            total_cum_delta += delta_rating[1]
 
     long_term_rating = get_delta_rating(aggressive_ratios, 49)
     delta_ratings.append(long_term_rating)
 
-    if long_term_rating == 'buy':
+    if long_term_rating[0] == 'buy':
         setup_score += 1
+        total_cum_delta += long_term_rating[1]
 
-    elif long_term_rating == 'sell':
+    elif long_term_rating[0] == 'sell':
+        setup_score -= 1
+        total_cum_delta += long_term_rating[1]
+
+    if total_cum_delta > 0:
+        setup_score += 1
+    else:
         setup_score -= 1
 
     print('Delta Ratings : ', delta_ratings)
+    print('Total Cumulative Delta', total_cum_delta)
 
     if setup_score > len(delta_ratings) / 2:
         signal = 'buy'
