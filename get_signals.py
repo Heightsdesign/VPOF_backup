@@ -104,7 +104,7 @@ def get_market_signal(dollar_bars, num_bars, num_ratings):
             setup_score += 1
             total_cum_delta += delta_rating[1]
 
-        elif delta_rating == 'sell':
+        elif delta_rating[0] == 'sell':
             setup_score -= 1
             total_cum_delta += delta_rating[1]
 
