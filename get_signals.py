@@ -5,7 +5,7 @@ import pandas_ta as ta
 
 from order_flow_tools import calculate_order_flow_metrics
 from dollar_bars import dollar_bars
-
+from kraken_toolbox import fetch_last_n_candles
 
 
 # Ensure the database connection is open
@@ -282,7 +282,8 @@ print('\n')
 # print('\n')
 
 print(get_market_signal(dollar_bars,7, 3))
-print('RSI : ', get_rsi(dollar_bars))
+five_m_candles = fetch_last_n_candles(5, 60)
+print('RSI : ', get_rsi(five_m_candles))
 
 
 # Fetch last ten signals
