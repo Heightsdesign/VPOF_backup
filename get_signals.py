@@ -282,7 +282,7 @@ print('\n')
 # print('\n')
 
 print(get_market_signal(dollar_bars,7, 3))
-five_m_candles = fetch_last_n_candles(5, 60)
+five_m_candles = fetch_last_n_candles('XXBTZUSD', 5, 60)
 print('RSI : ', get_rsi(five_m_candles))
 
 

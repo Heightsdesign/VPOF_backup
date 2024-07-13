@@ -137,7 +137,7 @@ def manage_positions(symbol, size, dollar_bars, num_bars):
     signal = get_market_signal(dollar_bars, num_bars, 3)
     stoch_rsi = calculate_stochastic_rsi(dollar_bars)
     setup = check_stochastic_setup(stoch_rsi)
-    five_m_candles = fetch_last_n_candles(5, 60)
+    five_m_candles = fetch_last_n_candles('XXBTZUSD',5, 60)
     rsi = get_rsi(five_m_candles)
 
     print(f"Market Signal: {signal}")
