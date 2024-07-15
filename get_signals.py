@@ -99,7 +99,7 @@ def get_market_signal(dollar_bars, num_bars, num_ratings):
     total_cum_delta = 0
 
     for i in range(num_ratings):
-        delta_rating = get_delta_rating(aggressive_ratios, num_bars * (i + 1))
+        delta_rating = get_delta_rating(delta_values, num_bars * (i + 1))
         delta_ratings.append(delta_rating)
 
         if delta_rating[0] == 'buy':
@@ -276,8 +276,8 @@ def print_positions(positions):
 """__________________________________________________________________________________________________________________"""
 
 
-print(calculate_stochastic_rsi(dollar_bars).tail(20))
-print('\n')
+# print(calculate_stochastic_rsi(dollar_bars).tail(20))
+# print('\n')
 
 # Fetch last n hours signals
 # print(fetch_last_n_hours_signals(24))

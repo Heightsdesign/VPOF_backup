@@ -9,6 +9,7 @@ kraken_api_url = 'https://api.kraken.com/0/public/OHLC'
 look_back_period_hours = 12  # Number of hours to look back
 pair = 'XXBTZUSD'  # Correct currency pair for BTC/USD
 interval = 1 # Minute interval
+volume_profile_results = {}
 
 
 # Function to fetch minute bars from Kraken
@@ -29,6 +30,7 @@ def fetch_minute_bars(pair, interval, look_back_period_hours):
         return data['result'][pair]
     else:
         raise Exception(f"Error fetching data from Kraken API: {data['error']}")
+
 
 # Function to calculate the volume profile
 def calculate_volume_profile(minute_bars):
@@ -51,6 +53,7 @@ def calculate_volume_profile(minute_bars):
             volume_profile[low][direction] += volume
 
     return volume_profile
+
 
 # Fetching minute bars
 minute_bars = fetch_minute_bars(pair, interval, look_back_period_hours)
@@ -101,6 +104,7 @@ cluster_median_volume = np.median(cluster_volumes) * 3
 
 # Filter clusters based on the new median volume
 filtered_clusters = [cluster for cluster in cluster_properties if cluster['total_volume'] >= cluster_median_volume]
+print(filtered_clusters)
 
 print('\n')
 # Define 'The Zone'
@@ -108,6 +112,8 @@ if filtered_clusters:
     zone_start = filtered_clusters[0]['start_price']
     zone_end = filtered_clusters[-1]['end_price']
     print(f"The Zone: Start Price: {zone_start}, End Price: {zone_end}")
+    volume_profile_results['start'] = zone_start
+    volume_profile_results['end'] = zone_end
 
     # Identify the POC of 'The Zone'
     zone_poc_cluster = max(filtered_clusters, key=lambda x: x['total_volume'])
@@ -128,7 +134,6 @@ if filtered_clusters:
             if segment_index >= 6:
                 segment_index = 5
             segment_volumes[segment_index] += total_volume
-
 
     for i in range(6):
         print(f"Segment {i+1} Volume: {segment_volumes[i]}")
