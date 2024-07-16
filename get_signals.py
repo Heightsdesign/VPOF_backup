@@ -97,6 +97,7 @@ def get_market_signal(dollar_bars, num_bars, num_ratings):
     delta_ratings = []
     setup_score = 0
     total_cum_delta = 0
+    result = {}
 
     for i in range(num_ratings):
         delta_rating = get_delta_rating(delta_values, num_bars * (i + 1))
@@ -138,7 +139,9 @@ def get_market_signal(dollar_bars, num_bars, num_ratings):
         signal = 'hold'
 
     print(f"Final Signal : {signal}")
-    return signal
+    result['signal'] = signal
+    result['score'] = setup_score
+    return result
 
 
 # Function to fetch the last 'buy' signal
@@ -280,7 +283,7 @@ def print_positions(positions):
 # print('\n')
 
 # Fetch last n hours signals
-# print(fetch_last_n_hours_signals(24))
+print(fetch_last_n_hours_signals(24))
 # print('\n')
 
 print(get_market_signal(dollar_bars,7, 3))

@@ -39,8 +39,8 @@ def insert_trade(trades):
     conn.commit()
 
 
-def insert_signal(
-        timestamp, order_flow_signal, order_flow_score, market_pressure, volume_profile_signal, price_action_signal):
+def insert_signal(order_flow_signal, order_flow_score, market_pressure, volume_profile_signal, price_action_signal):
+    timestamp = int(datetime.now(timezone.utc).timestamp())
     cursor.execute("""
     INSERT INTO signals (timestamp, order_flow_signal, order_flow_score, market_pressure, volume_profile_signal, price_action_signal)
     VALUES (?, ?, ?, ?, ?, ?)
@@ -140,6 +140,8 @@ def manage_positions(symbol, size, dollar_bars, num_bars):
     five_m_candles = fetch_last_n_candles('XXBTZUSD',5, 60)
     rsi = get_rsi(five_m_candles)
 
+    insert_signal(signal['signal'], signal['score'], 'N/A', 'N/A', 'N/A')
+
     print(f"Market Signal: {signal}")
 
     # Extract position details if there are open positions in the database
@@ -171,7 +173,7 @@ def manage_positions(symbol, size, dollar_bars, num_bars):
                     place_order(order_auth, symbol, 'buy', position['size'])
                     close_position(position_id, 'dollar_volume_exit', current_price)
 
-                elif signal == 'buy':
+                elif signal['signal'] == 'buy':
                     place_order(order_auth, symbol, 'buy', position['size'])
                     close_position(position_id, 'market_switch_exit', current_price)
 
@@ -192,7 +194,7 @@ def manage_positions(symbol, size, dollar_bars, num_bars):
                     place_order(order_auth, symbol, 'sell', position['size'])
                     close_position(position_id, 'dollar_volume_exit', current_price)
 
-                elif signal == 'sell':
+                elif signal['signal'] == 'sell':
                     place_order(order_auth, symbol, 'sell', position['size'])
                     close_position(position_id, 'market_switch_exit', current_price)
 
@@ -200,13 +202,13 @@ def manage_positions(symbol, size, dollar_bars, num_bars):
     if not open_positions['openPositions']:
         print('No open positions found.')
 
-        if signal == 'buy':
+        if signal['signal'] == 'buy':
             print('Placing new buy order.')
             place_order(order_auth, symbol, 'buy', size)
             take_profit, stop_loss = get_stops(dollar_bars, 'buy', current_price)
             insert_position(symbol, current_price, 'long', size, take_profit, stop_loss)
 
-        elif signal == 'sell':
+        elif signal['signal'] == 'sell':
             print('Placing new sell order.')
             place_order(order_auth, symbol, 'sell', size)
             take_profit, stop_loss = get_stops(dollar_bars, 'sell', current_price)
@@ -261,6 +263,7 @@ def run_analysis_and_store_signals():
 
     # Manage positions based on the signals
     manage_positions('PF_XBTUSD', 0.002, dollar_bars, 7)
+
 
 
 # Periodically run the analysis and store signals
