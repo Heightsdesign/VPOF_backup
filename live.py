@@ -200,13 +200,13 @@ def manage_positions(symbol, size, dollar_bars, num_bars):
     if not open_positions['openPositions']:
         print('No open positions found.')
 
-        if signal == 'buy' and rsi < 40:
+        if signal == 'buy':
             print('Placing new buy order.')
             place_order(order_auth, symbol, 'buy', size)
             take_profit, stop_loss = get_stops(dollar_bars, 'buy', current_price)
             insert_position(symbol, current_price, 'long', size, take_profit, stop_loss)
 
-        elif signal == 'sell' and rsi > 60:
+        elif signal == 'sell':
             print('Placing new sell order.')
             place_order(order_auth, symbol, 'sell', size)
             take_profit, stop_loss = get_stops(dollar_bars, 'sell', current_price)

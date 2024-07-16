@@ -6,7 +6,7 @@ from datetime import datetime, timezone
 kraken_api_url = 'https://api.kraken.com/0/public/OHLC'
 
 # Variables
-look_back_period_hours = 12  # Number of hours to look back
+look_back_period_hours = 24  # Number of hours to look back
 pair = 'XXBTZUSD'  # Correct currency pair for BTC/USD
 interval = 1 # Minute interval
 volume_profile_results = {}
