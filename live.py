@@ -264,8 +264,6 @@ def run_analysis_and_store_signals():
     # Manage positions based on the signals
     manage_positions('PF_XBTUSD', 0.002, dollar_bars, 7)
 
-
-
 # Periodically run the analysis and store signals
 async def periodic_analysis(interval):
     while True:
