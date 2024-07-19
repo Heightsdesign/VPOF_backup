@@ -2,10 +2,11 @@ import asyncio
 import json
 import sqlite3
 import websockets
-from datetime import datetime, timezone
+from datetime import datetime, timezone, timedelta
 import numpy as np
 import constants
 from sklearn.linear_model import LinearRegression
+import pytz
 
 from constants import dollar_threshold
 from dollar_bars import fetch_trades, create_dollar_bars
@@ -125,6 +126,15 @@ def calculate_dollar_volume_since_open(position_open_time):
     return dollar_volume if dollar_volume is not None else 0
 
 
+def is_us_market_opening_soon():
+    est = pytz.timezone('US/Eastern')
+    now = datetime.now(est)
+    market_open_time = now.replace(hour=9, minute=30, second=0, microsecond=0)
+    market_close_time = now.replace(hour=10, minute=30, second=0, microsecond=0)
+
+    return (market_open_time - timedelta(minutes=5)) <= now < market_close_time
+
+
 def manage_positions(symbol, size, dollar_bars, num_bars):
     # Fetch positions and current price
     open_positions = get_open_positions(open_pos_auth)
@@ -137,7 +147,7 @@ def manage_positions(symbol, size, dollar_bars, num_bars):
     signal = get_market_signal(dollar_bars, num_bars, 3)
     stoch_rsi = calculate_stochastic_rsi(dollar_bars)
     setup = check_stochastic_setup(stoch_rsi)
-    five_m_candles = fetch_last_n_candles('XXBTZUSD',5, 60)
+    five_m_candles = fetch_last_n_candles('XXBTZUSD', 5, 60)
     rsi = get_rsi(five_m_candles)
 
     insert_signal(signal['signal'], signal['score'], 'N/A', 'N/A', 'N/A')
@@ -151,6 +161,18 @@ def manage_positions(symbol, size, dollar_bars, num_bars):
 
         # Calculate the dollar volume since the position was opened
         dollar_volume_since_open = calculate_dollar_volume_since_open(open_timestamp)
+
+    # Close positions 5 minutes before market open and avoid trading for 1 hour after market open
+    if is_us_market_opening_soon():
+        if open_positions and 'openPositions' in open_positions and open_positions['openPositions']:
+            for position in open_positions['openPositions']:
+                if position['symbol'] == symbol:
+                    action = 'buy' if position['side'] == 'short' else 'sell'
+                    place_order(order_auth, symbol, action, position['size'])
+                    close_position(position_id, 'market_open_avoidance', current_price)
+                    print(f"Closed position {position_id} to avoid US market open volatility.")
+        print("Avoiding new positions due to US market open.")
+        return
 
     # Check for open positions via API
     if open_positions and 'openPositions' in open_positions and open_positions['openPositions']:
