@@ -7,7 +7,7 @@ cursor = conn.cursor()
 
 # Get the current time and calculate the timestamp for one week ago
 current_time = datetime.now(timezone.utc)
-one_week_ago = current_time - timedelta(days=7)
+one_week_ago = current_time - timedelta(days=30)
 one_week_ago_timestamp = int(one_week_ago.timestamp())
 
 # SQL query to delete trades older than one week
