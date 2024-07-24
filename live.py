@@ -105,7 +105,7 @@ def get_stops(dollar_bars, side, current_price):
     return take_profit, stop_loss
 
 
-def check_trailing_stop(symbol, open_timestamp, open_price, side, threshold=1000, drop_percentage=0.20):
+def check_trailing_stop(symbol, open_timestamp, open_price, side, threshold=500, drop_percentage=0.20):
     """
     Check if the current price triggers the trailing stop.
 
