@@ -105,10 +105,11 @@ def get_stops(dollar_bars, side, current_price):
     return take_profit, stop_loss
 
 
-def check_trailing_stop(symbol, open_timestamp, open_price, side, threshold=500, drop_percentage=0.20):
+def check_trailing_stop(symbol, open_timestamp, open_price, current_price, side, threshold=500, drop_percentage=0.20):
     """
     Check if the current price triggers the trailing stop.
 
+    :param current_price: current price
     :param symbol: The trading pair (e.g., 'XXBTUSD' for BTC/USD).
     :param open_timestamp: The timestamp when the position was opened.
     :param open_price: The price at which the position was opened.
@@ -118,7 +119,6 @@ def check_trailing_stop(symbol, open_timestamp, open_price, side, threshold=500,
     :return: Boolean indicating whether to close the position.
     """
     candles = fetch_candles_since(symbol, start_time=open_timestamp)
-    current_price = fetch_live_price(symbol)['last_price']
 
     if side == 'long':
         # Find the highest price since the position was opened
@@ -151,7 +151,6 @@ def check_trailing_stop(symbol, open_timestamp, open_price, side, threshold=500,
                 return True
 
     return False
-
 
 
 def calculate_slope_pressure(pressure_data):
@@ -244,10 +243,6 @@ def manage_positions(symbol, size, dollar_bars, num_bars):
                     place_order(order_auth, symbol, 'buy', position['size'])
                     close_position(position_id, 'dollar_volume_exit', current_price)
 
-                elif check_trailing_stop(symbol, open_timestamp, open_price, 'short'):
-                    place_order(order_auth, symbol, 'buy', position['size'])
-                    close_position(position_id, 'trailing_stop_exit', current_price)
-                    print(f"Closed short position due to trailing stop.")
 
                 elif signal['signal'] == 'buy':
                     place_order(order_auth, symbol, 'buy', position['size'])
@@ -269,11 +264,6 @@ def manage_positions(symbol, size, dollar_bars, num_bars):
                 elif dollar_volume_since_open >= dollar_threshold * num_bars:
                     place_order(order_auth, symbol, 'sell', position['size'])
                     close_position(position_id, 'dollar_volume_exit', current_price)
-
-                elif check_trailing_stop(symbol, open_timestamp, open_price, 'long'):
-                    place_order(order_auth, symbol, 'sell', position['size'])
-                    close_position(position_id, 'trailing_stop_exit', current_price)
-                    print(f"Closed long position due to trailing stop.")
 
                 elif signal['signal'] == 'sell':
                     place_order(order_auth, symbol, 'sell', position['size'])
@@ -344,6 +334,7 @@ def run_analysis_and_store_signals():
 
     # Manage positions based on the signals
     manage_positions('PF_XBTUSD', 0.002, dollar_bars, 7)
+
 
 # Periodically run the analysis and store signals
 async def periodic_analysis(interval):
